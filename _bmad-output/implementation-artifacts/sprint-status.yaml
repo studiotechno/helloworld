@@ -1,0 +1,97 @@
+# generated: 2026-01-09
+# project: codebase-chat
+# project_key: codebase-chat
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog -> in-progress: Automatically when first story is created (via create-story)
+#   - in-progress -> done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-09
+project: codebase-chat
+project_key: codebase-chat
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Fondation Projet & Authentification Utilisateur
+  epic-1: backlog
+  1-1-initialisation-projet-infrastructure: done
+  1-2-authentification-github-oauth: done
+  1-3-layout-application-navigation: backlog
+  1-4-deconnexion-utilisateur: backlog
+  1-5-suppression-de-compte: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Connexion Repository GitHub
+  epic-2: backlog
+  2-1-integration-github-api-liste-des-repositories: backlog
+  2-2-connexion-dun-repository: backlog
+  2-3-affichage-repository-actif-selecteur: backlog
+  2-4-deconnexion-dun-repository: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Interface Conversationnelle
+  epic-3: backlog
+  3-1-interface-chat-de-base: backlog
+  3-2-envoi-de-messages-streaming-des-reponses: backlog
+  3-3-persistance-historique-de-conversation: backlog
+  3-4-creation-de-nouvelle-conversation: backlog
+  3-5-liste-des-conversations-dans-la-sidebar: backlog
+  3-6-qualite-des-reponses-confiance-binaire: backlog
+  3-7-citations-de-code-inline: backlog
+  3-8-feedback-visuel-pour-analyses-longues: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Analyse de Codebase
+  epic-4: backlog
+  4-1-vue-densemble-des-features-du-projet: backlog
+  4-2-detection-de-la-stack-technique: backlog
+  4-3-analyse-du-schema-de-base-de-donnees: backlog
+  4-4-structure-des-composants-du-projet: backlog
+  4-5-changelog-developpements-recents: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Analyse d'Impact & Technique
+  epic-5: backlog
+  5-1-analyse-dimpact-dune-feature: backlog
+  5-2-points-de-vigilance-dependances-critiques: backlog
+  5-3-comparaison-deffort-entre-features: backlog
+  5-4-analyse-de-la-dette-technique: backlog
+  5-5-recommandations-damelioration: backlog
+  5-6-evaluation-de-la-scalabilite: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Export & Partage
+  epic-6: backlog
+  6-1-export-en-markdown: backlog
+  6-2-export-en-pdf: backlog
+  6-3-copie-dans-le-presse-papier: backlog
+  6-4-raccourci-clavier-bouton-export-visible: backlog
+  epic-6-retrospective: optional

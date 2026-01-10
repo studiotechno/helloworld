@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Users table - stores authenticated users from GitHub OAuth
+model users {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  github_id    String   @unique
+  email        String?
+  name         String?
+  avatar_url   String?
+  github_token String?  // Stored encrypted via Supabase Vault
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations (to be added in future stories)
+  repositories  repositories[]
+  conversations conversations[]
+
+  @@map("users")
+}
+
+// Repositories table - stores connected GitHub repositories
+model repositories {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String    @db.Uuid
+  github_repo_id String
+  full_name      String    // owner/repo format
+  default_branch String    @default("main")
+  is_active      Boolean   @default(true)
+  last_synced_at DateTime? @db.Timestamptz(6)
+  created_at     DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user          users          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  conversations conversations[]
+
+  @@unique([user_id, github_repo_id])
+  @@map("repositories")
+}
+
+// Conversations table - stores chat conversations
+model conversations {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @db.Uuid
+  repository_id String   @db.Uuid
+  title         String?  // Auto-generated from first message
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  user       users        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  repository repositories @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+  messages   messages[]
+
+  @@map("conversations")
+}
+
+// Messages table - stores chat messages
+model messages {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  conversation_id String   @db.Uuid
+  role            String   // 'user' or 'assistant'
+  content         String
+  citations       Json     @default("[]") // [{file, line, snippet}]
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  conversation conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
