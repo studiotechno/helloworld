@@ -1,15 +1,57 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Copy, Check, User, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { CodeCitation } from './CodeCitation'
+import {
+  splitContentByCitations,
+  isCitation,
+} from '@/lib/utils/citation-parser'
 
 export interface ChatMessageProps {
   role: 'user' | 'assistant'
   content: string
   isStreaming?: boolean
+}
+
+/**
+ * Renders content with inline code citations
+ * Parses [file.ts:line] patterns and replaces them with CodeCitation components
+ */
+function ContentWithCitations({ content }: { content: string }) {
+  const segments = useMemo(() => splitContentByCitations(content), [content])
+
+  // If no citations, render as plain markdown
+  if (segments.length === 1 && typeof segments[0] === 'string') {
+    return <ReactMarkdown>{content || ' '}</ReactMarkdown>
+  }
+
+  // Render segments with citations inline
+  return (
+    <>
+      {segments.map((segment, index) => {
+        if (isCitation(segment)) {
+          return (
+            <CodeCitation
+              key={`citation-${index}`}
+              path={segment.path}
+              line={segment.line}
+              variant="inline"
+            />
+          )
+        }
+        // Render text segments as markdown
+        return (
+          <Fragment key={`text-${index}`}>
+            <ReactMarkdown>{segment || ''}</ReactMarkdown>
+          </Fragment>
+        )
+      })}
+    </>
+  )
 }
 
 export function ChatMessage({ role, content, isStreaming = false }: ChatMessageProps) {
@@ -77,7 +119,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
           )}
         </Button>
 
-        {/* Message text with markdown support */}
+        {/* Message text with markdown and citation support */}
         <div
           className={cn(
             'prose prose-sm max-w-none',
@@ -91,7 +133,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
             isStreaming && 'after:inline-block after:w-1 after:animate-pulse after:bg-current after:content-[""]'
           )}
         >
-          <ReactMarkdown>{content || ' '}</ReactMarkdown>
+          <ContentWithCitations content={content || ' '} />
         </div>
       </div>
     </div>

@@ -33,10 +33,10 @@ async function LoginPageContent({
         {/* Logo / Brand */}
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-foreground">
-            <span className="text-primary">Codebase</span> Chat
+            <span className="text-primary">Techno</span>
           </h1>
           <p className="mt-3 text-muted-foreground">
-            Discutez avec votre code en langage naturel
+            Discutez avec votre codebase en langage naturel
           </p>
         </div>
 

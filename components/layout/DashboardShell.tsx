@@ -13,6 +13,7 @@ import { TopBar } from './TopBar'
 import { Sparkles } from 'lucide-react'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { useRepoTechnologies } from '@/hooks/useRepoTechnologies'
+import { useNewConversationShortcut } from '@/hooks/use-keyboard-shortcuts'
 
 interface DashboardShellProps {
   user: {
@@ -29,6 +30,9 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
   const { data: activeRepo, isLoading: repoLoading } = useActiveRepo()
   // Only fetch technologies when we have an active repo
   const { data: technologies } = useRepoTechnologies(!!activeRepo)
+
+  // Global keyboard shortcut: ⌘+N for new conversation
+  useNewConversationShortcut()
 
   const handleToggleSidebar = useCallback(() => {
     setSidebarCollapsed((prev) => !prev)

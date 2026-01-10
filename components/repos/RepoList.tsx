@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RepoCard } from './RepoCard'
 import { RepoError } from './RepoError'
-import { useRepos } from '@/hooks/useRepos'
+import { useRepos, useActiveRepo } from '@/hooks'
 import { cn } from '@/lib/utils'
 
 interface RepoListProps {
@@ -65,6 +65,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
 export function RepoList({ onSelectRepo, className }: RepoListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const { data: repos, isLoading, error, refetch } = useRepos()
+  const { data: activeRepo } = useActiveRepo()
 
   // Filter repos based on search query (client-side)
   const filteredRepos = useMemo(() => {
@@ -134,6 +135,7 @@ export function RepoList({ onSelectRepo, className }: RepoListProps) {
                 <RepoCard
                   key={repo.id}
                   repo={repo}
+                  isActive={activeRepo?.github_repo_id === String(repo.id)}
                   onClick={() => handleRepoClick(repo.id, repo.full_name)}
                 />
               ))}

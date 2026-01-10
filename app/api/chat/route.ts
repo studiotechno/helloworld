@@ -3,27 +3,30 @@ import { anthropic } from '@ai-sdk/anthropic'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
+import { buildSystemPromptWithContext } from '@/lib/ai/prompts'
 
-// Text part schema for AI SDK v6 message format
-const textPartSchema = z.object({
-  type: z.literal('text'),
-  text: z.string(),
-})
+// Part schema for AI SDK v6 message format
+// Accept any part type (text, tool_call, tool_result, etc.)
+const partSchema = z.object({
+  type: z.string(),
+}).passthrough()
 
 // Message schema supporting AI SDK v6 format (parts array)
+// Using passthrough() to allow extra fields from the AI SDK that we don't need to validate
 const messageSchema = z.object({
   id: z.string().optional(),
   role: z.enum(['user', 'assistant', 'system']),
-  parts: z.array(textPartSchema).optional(),
+  parts: z.array(partSchema).optional(),
   content: z.string().optional(),
-})
+}).passthrough()
 
 // Request validation schema
+// Note: conversationId can be null from the client, so we accept null and transform to undefined
 const chatRequestSchema = z.object({
   messages: z.array(messageSchema),
-  repoId: z.string().uuid().optional(),
-  conversationId: z.string().uuid().optional(),
-})
+  repoId: z.string().uuid().optional().nullable().transform(val => val ?? undefined),
+  conversationId: z.string().uuid().optional().nullable().transform(val => val ?? undefined),
+}).passthrough()
 
 // Helper to extract text content from a message (supports both v6 parts and legacy content)
 function getMessageContent(message: z.infer<typeof messageSchema>): string {
@@ -48,21 +51,8 @@ function generateTitle(content: string): string {
   return (lastSpace > 0 ? truncated.substring(0, lastSpace) : truncated) + '...'
 }
 
-// System prompt for the codebase assistant
-const SYSTEM_PROMPT = `Tu es un assistant expert qui aide les Product Managers et entrepreneurs non-techniques a comprendre leur codebase.
-
-Ton role:
-- Repondre aux questions sur le code en langage naturel
-- Expliquer les concepts techniques de maniere pedagogique et accessible
-- Utiliser un vocabulaire professionnel adapte aux PMs (pas de vulgarisation excessive)
-- Citer les fichiers sources pertinents quand tu fais reference au code
-
-Regles importantes:
-- Reponds toujours en francais
-- Si tu n'es pas certain d'une reponse, dis-le clairement: "Je ne suis pas en mesure de repondre avec certitude a cette question"
-- Ne dis jamais "peut-etre" ou "probablement" avec un pourcentage de confiance
-- Sois concis par defaut, mais developpe si la question est complexe
-- Formate tes reponses avec du markdown pour la lisibilite`
+// System prompt is now built dynamically using lib/ai/prompts
+// See lib/ai/prompts/base.ts and lib/ai/confidence.ts for the full prompt structure
 
 export async function POST(req: Request) {
   try {
@@ -80,6 +70,8 @@ export async function POST(req: Request) {
     const parseResult = chatRequestSchema.safeParse(body)
 
     if (!parseResult.success) {
+      console.error('[API] Chat validation error:', JSON.stringify(parseResult.error.issues, null, 2))
+      console.error('[API] Request body:', JSON.stringify(body, null, 2).substring(0, 1000))
       return new Response(
         JSON.stringify({
           error: {
@@ -146,11 +138,29 @@ export async function POST(req: Request) {
       })
     }
 
+    // Get repository context for the system prompt if available
+    let repoContext: { name: string; branch: string } | undefined
+    if (repoId) {
+      const repository = await prisma.repositories.findFirst({
+        where: { id: repoId, user_id: user.id },
+        select: { full_name: true, default_branch: true },
+      })
+      if (repository) {
+        repoContext = {
+          name: repository.full_name,
+          branch: repository.default_branch,
+        }
+      }
+    }
+
+    // Build the system prompt with confidence handling and repo context
+    const systemPrompt = buildSystemPromptWithContext(repoContext)
+
     // Stream the response using Anthropic Claude
     const result = await streamText({
       model: anthropic('claude-sonnet-4-20250514'),
       messages,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       maxOutputTokens: 4096,
       onFinish: async ({ text }) => {
         // Save assistant message after streaming completes

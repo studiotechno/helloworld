@@ -4,19 +4,22 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useActiveRepo } from '@/hooks'
+import { useQueryClient } from '@tanstack/react-query'
+import { useActiveRepo, useAnalysisLoader } from '@/hooks'
 import {
   ChatContainer,
   ChatInput,
   ChatMessage,
   EmptyState,
   TypingIndicator,
+  AnalysisLoader,
   ScrollToBottom,
 } from '@/components/chat'
 import { toast } from 'sonner'
 
 export default function ChatPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: activeRepo, isLoading: repoLoading } = useActiveRepo()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [userScrolled, setUserScrolled] = useState(false)
@@ -45,6 +48,9 @@ export default function ChatPage() {
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
+  // Analysis loader state management
+  const analysisLoader = useAnalysisLoader(status === 'submitted')
+
   // Redirect to repos if no active repo
   useEffect(() => {
     if (!repoLoading && !activeRepo) {
@@ -52,13 +58,22 @@ export default function ChatPage() {
     }
   }, [activeRepo, repoLoading, router])
 
-  // After streaming completes, redirect to the conversation page
+  // Handle status changes: invalidate cache on submit, redirect on completion
   useEffect(() => {
-    const wasStreaming = previousStatusRef.current === 'streaming'
-    const isNowReady = status === 'ready'
+    const prevStatus = previousStatusRef.current
 
-    if (wasStreaming && isNowReady && messages.length > 0 && !hasRedirected) {
-      // Fetch the latest conversation and redirect
+    // When message is submitted, invalidate conversations cache so sidebar updates immediately
+    if (prevStatus === 'ready' && status === 'submitted' && messages.length > 0) {
+      // Small delay to let the API create the conversation
+      const timer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      }, 500)
+      previousStatusRef.current = status
+      return () => clearTimeout(timer)
+    }
+
+    // After streaming completes, redirect to the conversation page
+    if (prevStatus === 'streaming' && status === 'ready' && messages.length > 0 && !hasRedirected) {
       const redirectToConversation = async () => {
         try {
           const response = await fetch('/api/conversations')
@@ -78,7 +93,7 @@ export default function ChatPage() {
     }
 
     previousStatusRef.current = status
-  }, [status, messages.length, hasRedirected, router])
+  }, [status, messages.length, hasRedirected, router, queryClient])
 
   // Auto-scroll to bottom when new messages arrive (unless user scrolled up)
   useEffect(() => {
@@ -187,7 +202,17 @@ export default function ChatPage() {
               />
             ))}
             {status === 'submitted' && messages[messages.length - 1]?.role === 'user' && (
-              <TypingIndicator />
+              analysisLoader.showLoader ? (
+                <AnalysisLoader
+                  phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
+                  message={analysisLoader.message}
+                  filesAnalyzed={analysisLoader.filesAnalyzed}
+                  foldersAnalyzed={analysisLoader.foldersAnalyzed}
+                  onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+                />
+              ) : (
+                <TypingIndicator />
+              )
             )}
           </div>
         ) : (

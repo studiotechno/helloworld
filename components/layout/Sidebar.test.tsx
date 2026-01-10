@@ -10,12 +10,29 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/chat',
 }))
 
-// Mock useConversations hook
-vi.mock('@/hooks', () => ({
+// Mock use-conversations hook
+vi.mock('@/hooks/use-conversations', () => ({
   useConversations: () => ({
     data: [],
     isLoading: false,
   }),
+  useDeleteConversation: () => ({
+    mutateAsync: vi.fn(),
+  }),
+}))
+
+// Mock date-groups utility
+vi.mock('@/lib/utils/date-groups', () => ({
+  groupConversationsByDate: () => new Map(),
+  DATE_GROUP_LABELS: {
+    today: "Aujourd'hui",
+    yesterday: 'Hier',
+    thisWeek: 'Cette semaine',
+    thisMonth: 'Ce mois',
+    older: 'Plus ancien',
+  },
+  DATE_GROUP_ORDER: ['today', 'yesterday', 'thisWeek', 'thisMonth', 'older'],
+  getConversationEmoji: () => '💬',
 }))
 
 // Mock TooltipProvider context
@@ -46,7 +63,6 @@ describe('Sidebar', () => {
 
     expect(screen.getByText('techno')).toBeInTheDocument()
     expect(screen.getByText('Nouvelle conversation')).toBeInTheDocument()
-    expect(screen.getByText('Conversations')).toBeInTheDocument()
   })
 
   it('renders collapsed sidebar without visible text (text in tooltips only)', () => {
@@ -54,8 +70,6 @@ describe('Sidebar', () => {
 
     // Branding text should not be visible
     expect(screen.queryByText('techno')).not.toBeInTheDocument()
-    // Conversations label should not be visible
-    expect(screen.queryByText('Conversations')).not.toBeInTheDocument()
     // Keyboard hint should not be visible
     expect(screen.queryByText('pour réduire')).not.toBeInTheDocument()
   })
@@ -116,5 +130,11 @@ describe('Sidebar', () => {
     render(<Sidebar isCollapsed={true} onToggle={mockOnToggle} />)
 
     expect(screen.queryByText('pour réduire')).not.toBeInTheDocument()
+  })
+
+  it('shows empty state when no conversations', () => {
+    render(<Sidebar isCollapsed={false} onToggle={mockOnToggle} />)
+
+    expect(screen.getByText('Aucune conversation')).toBeInTheDocument()
   })
 })

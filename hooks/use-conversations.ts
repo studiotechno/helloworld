@@ -94,3 +94,46 @@ export function useCreateConversation() {
     },
   })
 }
+
+/**
+ * Hook to delete a conversation
+ */
+export function useDeleteConversation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (conversationId: string) => {
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error?.error?.message || 'Failed to delete conversation')
+      }
+    },
+    onMutate: async (conversationId: string) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['conversations'] })
+
+      // Snapshot the previous value
+      const previousConversations = queryClient.getQueryData<Conversation[]>(['conversations'])
+
+      // Optimistically update
+      queryClient.setQueryData<Conversation[]>(['conversations'], (old) =>
+        old?.filter((c) => c.id !== conversationId)
+      )
+
+      return { previousConversations }
+    },
+    onError: (_err, _conversationId, context) => {
+      // Rollback on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations)
+      }
+    },
+    onSettled: () => {
+      // Refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
+}

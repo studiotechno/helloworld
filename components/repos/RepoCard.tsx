@@ -7,6 +7,7 @@ import type { GitHubRepo } from '@/lib/github/types'
 interface RepoCardProps {
   repo: GitHubRepo
   onClick?: () => void
+  isActive?: boolean
   className?: string
 }
 
@@ -58,33 +59,46 @@ function formatRelativeTime(dateString: string): string {
   return `il y a ${years} an${years > 1 ? 's' : ''}`
 }
 
-export function RepoCard({ repo, onClick, className }: RepoCardProps) {
+export function RepoCard({ repo, onClick, isActive, className }: RepoCardProps) {
   const languageColor = repo.language ? languageColors[repo.language] || 'bg-gray-400' : null
 
   return (
     <button
-      onClick={onClick}
+      onClick={isActive ? undefined : onClick}
+      disabled={isActive}
       className={cn(
-        'w-full text-left p-4 rounded-lg border border-border bg-card',
+        'w-full text-left p-4 rounded-lg border bg-card',
         'transition-all duration-200 ease-out',
-        'hover:border-pink-500/50 hover:shadow-[0_0_20px_-5px_rgba(236,72,153,0.3)]',
-        'hover:scale-[1.01]',
+        isActive
+          ? 'border-pink-500 cursor-default opacity-90'
+          : [
+              'border-border',
+              'hover:border-pink-500/50 hover:shadow-[0_0_20px_-5px_rgba(236,72,153,0.3)]',
+              'hover:scale-[1.01]',
+            ],
         'focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:ring-offset-2 focus:ring-offset-background',
         className
       )}
       type="button"
     >
-      {/* Header: repo name and private badge */}
+      {/* Header: repo name and badges */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <GitFork className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <span className="font-medium text-foreground truncate">{repo.full_name}</span>
         </div>
-        {repo.private && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex-shrink-0">
-            Prive
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isActive && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-500 font-medium">
+              Connecte
+            </span>
+          )}
+          {repo.private && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              Prive
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Description */}

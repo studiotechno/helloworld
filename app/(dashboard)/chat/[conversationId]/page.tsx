@@ -4,12 +4,13 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
-import { useActiveRepo } from '@/hooks'
+import { useActiveRepo, useAnalysisLoader } from '@/hooks'
 import {
   ChatContainer,
   ChatInput,
   ChatMessage,
   TypingIndicator,
+  AnalysisLoader,
   ScrollToBottom,
 } from '@/components/chat'
 import { toast } from 'sonner'
@@ -117,6 +118,9 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   })
 
   const isLoading = status === 'submitted' || status === 'streaming'
+
+  // Analysis loader state management
+  const analysisLoader = useAnalysisLoader(status === 'submitted')
 
   // Combine stored messages with new chat messages
   // Chat messages from useChat start fresh, so we show stored + new
@@ -264,7 +268,17 @@ export default function ConversationPage({ params }: ConversationPageProps) {
               />
             ))}
             {status === 'submitted' && allMessages[allMessages.length - 1]?.role === 'user' && (
-              <TypingIndicator />
+              analysisLoader.showLoader ? (
+                <AnalysisLoader
+                  phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
+                  message={analysisLoader.message}
+                  filesAnalyzed={analysisLoader.filesAnalyzed}
+                  foldersAnalyzed={analysisLoader.foldersAnalyzed}
+                  onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+                />
+              ) : (
+                <TypingIndicator />
+              )
             )}
           </div>
         ) : (

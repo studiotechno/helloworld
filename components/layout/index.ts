@@ -5,6 +5,5 @@ export { UserMenu } from './UserMenu'
 export { DashboardShell } from './DashboardShell'
 export { RepoSelector } from './RepoSelector'
 export { TechTags } from './TechTags'
-
-// Placeholder exports - to be implemented in future stories
-// export { ConversationList } from './ConversationList' // Epic 3
+export { ConversationItem } from './ConversationItem'
+export { DeleteConversationDialog } from './DeleteConversationDialog'
