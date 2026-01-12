@@ -176,20 +176,35 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
         </div>
         <DropdownMenuSeparator />
         {/* Re-index / Start indexing option */}
-        <DropdownMenuItem
-          onClick={() => startIndexing()}
-          disabled={isInProgress || isStarting}
-          className="gap-2 cursor-pointer"
-        >
-          <RefreshCw className={cn('size-4', (isInProgress || isStarting) && 'animate-spin')} />
-          <span>
-            {isInProgress
-              ? 'Indéxation en cours...'
-              : isIndexed
-                ? 'Ré-indéxer'
-                : 'Démarrer l\'indéxation'}
-          </span>
-        </DropdownMenuItem>
+        {(() => {
+          // Can't re-index if already indexed and no new commit
+          const cannotReindex = isIndexed && !statusData?.hasNewerCommit
+          const isDisabled = isInProgress || isStarting || cannotReindex
+
+          return (
+            <div>
+              <DropdownMenuItem
+                onClick={() => !cannotReindex && startIndexing()}
+                disabled={isDisabled}
+                className={cn('gap-2', cannotReindex ? 'cursor-not-allowed opacity-50' : 'cursor-pointer')}
+              >
+                <RefreshCw className={cn('size-4', (isInProgress || isStarting) && 'animate-spin')} />
+                <span>
+                  {isInProgress
+                    ? 'Indéxation en cours...'
+                    : isIndexed
+                      ? 'Ré-indéxer'
+                      : 'Démarrer l\'indéxation'}
+                </span>
+              </DropdownMenuItem>
+              {cannotReindex && (
+                <p className="px-2 pb-1.5 text-xs text-muted-foreground">
+                  Aucun nouveau commit depuis la dernière indexation
+                </p>
+              )}
+            </div>
+          )
+        })()}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => router.push('/repos')}

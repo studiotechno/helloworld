@@ -131,11 +131,15 @@ export async function POST(req: Request, { params }: RouteParams) {
 
 /**
  * DELETE /api/repos/[repoId]/index
- * Cancel an ongoing indexation
+ * Cancel an ongoing indexation or delete a completed one
+ * Query param: ?force=true to delete completed indexation
  */
 export async function DELETE(req: Request, { params }: RouteParams) {
   try {
     const { repoId } = await params
+    const { searchParams } = new URL(req.url)
+    const force = searchParams.get('force') === 'true'
+
     const user = await getCurrentUser()
 
     if (!user) {
@@ -164,7 +168,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       )
     }
 
-    // Get and cancel the job
+    // Get the job
     const existingJob = await getJobByRepository(repoId)
 
     if (!existingJob) {
@@ -174,34 +178,53 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       )
     }
 
-    if (!isJobInProgress(existingJob.status)) {
+    // If job is in progress, cancel it
+    if (isJobInProgress(existingJob.status)) {
+      const cancelledJob = await cancelJob(existingJob.id)
+
+      if (!cancelledJob) {
+        return NextResponse.json(
+          { error: { code: 'CANCEL_FAILED', message: 'Impossible d\'annuler le job' } },
+          { status: 500 }
+        )
+      }
+
       return NextResponse.json({
-        message: 'Le job n\'est pas en cours',
-        status: existingJob.status,
+        message: 'Indexation annulee',
+        status: cancelledJob.status,
       })
     }
 
-    const cancelledJob = await cancelJob(existingJob.id)
+    // If force=true or job is completed/failed, delete everything
+    if (force || existingJob.status === 'completed' || existingJob.status === 'failed') {
+      // Delete all chunks for this repository
+      const deletedChunks = await prisma.code_chunks.deleteMany({
+        where: { repository_id: repoId },
+      })
 
-    if (!cancelledJob) {
-      return NextResponse.json(
-        { error: { code: 'CANCEL_FAILED', message: 'Impossible d\'annuler le job' } },
-        { status: 500 }
-      )
+      // Delete the indexing job
+      await prisma.indexing_jobs.delete({
+        where: { id: existingJob.id },
+      })
+
+      return NextResponse.json({
+        message: 'Indexation supprimee',
+        chunksDeleted: deletedChunks.count,
+      })
     }
 
     return NextResponse.json({
-      message: 'Indexation annulee',
-      status: cancelledJob.status,
+      message: 'Le job n\'est pas en cours',
+      status: existingJob.status,
     })
   } catch (error) {
-    console.error('[API] Cancel indexation error:', error)
+    console.error('[API] Delete indexation error:', error)
 
     return NextResponse.json(
       {
         error: {
-          code: 'CANCEL_FAILED',
-          message: 'Impossible d\'annuler l\'indexation',
+          code: 'DELETE_FAILED',
+          message: 'Impossible de supprimer l\'indexation',
         },
       },
       { status: 500 }
