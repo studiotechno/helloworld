@@ -20,7 +20,7 @@ export function formatRelative(date: Date): string {
   const diffDay = Math.floor(diffHour / 24)
 
   if (diffSec < 60) {
-    return "a l'instant"
+    return "à l'instant"
   }
   if (diffMin < 60) {
     return `il y a ${diffMin} minute${diffMin > 1 ? 's' : ''}`

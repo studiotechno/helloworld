@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { FolderGit2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { RepoList, SizeWarningDialog } from '@/components/repos'
+import { RepoList, SizeWarningDialog, IndexedReposSection } from '@/components/repos'
 import { useConnectRepo } from '@/hooks/useConnectRepo'
 import { useRepos } from '@/hooks/useRepos'
 import { checkRepoSizeWarning } from '@/lib/github/client'
@@ -103,6 +103,9 @@ export default function ReposPage() {
             </p>
           </div>
         </div>
+
+        {/* Indexed repos section */}
+        <IndexedReposSection />
 
         {/* Repo list with search */}
         <RepoList onSelectRepo={handleSelectRepo} />

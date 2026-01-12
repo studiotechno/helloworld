@@ -55,17 +55,26 @@ const QUERY_PATTERNS: QueryPattern[] = [
   },
   {
     type: 'CONFIG',
-    keywords: ['config', 'configuration', 'settings', 'env', 'environment'],
-    keywordsFr: ['config', 'configuration', 'parametres', 'environnement'],
+    keywords: [
+      'config', 'configuration', 'settings', 'env', 'environment',
+      'stack', 'tech stack', 'technology', 'technologies', 'framework', 'frameworks',
+      'dependencies', 'package', 'packages', 'library', 'libraries',
+    ],
+    keywordsFr: [
+      'config', 'configuration', 'parametres', 'environnement',
+      'stack', 'technique', 'technologie', 'technologies', 'framework', 'frameworks',
+      'dependances', 'librairie', 'librairies', 'bibliotheque', 'bibliotheques',
+    ],
   },
 ]
 
-// Keywords that suggest the user wants a comprehensive list
+// Keywords that suggest the user wants a comprehensive list or overview
 const LIST_INDICATORS = [
   // English
-  'all', 'list', 'every', 'available', 'what are', 'show me', 'give me',
+  'all', 'list', 'every', 'available', 'what are', 'show me', 'give me', 'what is the',
   // French
   'tous', 'toutes', 'liste', 'quels', 'quelles', 'disponibles', 'montre', 'donne',
+  "c'est quoi", 'quelle est', 'quel est', 'quoi',
 ]
 
 /**
@@ -158,6 +167,10 @@ export function getMetadataFilter(queryType: QueryType): {
           '%tsconfig%',
           '%package.json',
           '%.env%',
+          '%Dockerfile%',
+          '%docker-compose%',
+          '%.nvmrc',
+          '%.node-version',
         ],
       }
     case 'GENERIC':

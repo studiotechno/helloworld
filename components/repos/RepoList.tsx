@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RepoCard } from './RepoCard'
 import { RepoError } from './RepoError'
-import { useRepos, useActiveRepo } from '@/hooks'
+import { useRepos, useActiveRepo, useIndexedRepos } from '@/hooks'
 import { cn } from '@/lib/utils'
 
 interface RepoListProps {
@@ -66,19 +66,32 @@ export function RepoList({ onSelectRepo, className }: RepoListProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const { data: repos, isLoading, error, refetch } = useRepos()
   const { data: activeRepo } = useActiveRepo()
+  const { data: indexedRepos } = useIndexedRepos()
 
-  // Filter repos based on search query (client-side)
+  // Get set of indexed repo GitHub IDs for quick lookup
+  const indexedRepoIds = useMemo(() => {
+    if (!indexedRepos) return new Set<string>()
+    return new Set(indexedRepos.map((r) => r.github_repo_id))
+  }, [indexedRepos])
+
+  // Filter repos based on search query and exclude indexed repos
   const filteredRepos = useMemo(() => {
     if (!repos) return []
-    if (!searchQuery.trim()) return repos
+
+    // First filter out indexed repos
+    const nonIndexedRepos = repos.filter(
+      (repo) => !indexedRepoIds.has(String(repo.id))
+    )
+
+    if (!searchQuery.trim()) return nonIndexedRepos
 
     const query = searchQuery.toLowerCase()
-    return repos.filter(
+    return nonIndexedRepos.filter(
       (repo) =>
         repo.full_name.toLowerCase().includes(query) ||
         (repo.description?.toLowerCase().includes(query) ?? false)
     )
-  }, [repos, searchQuery])
+  }, [repos, searchQuery, indexedRepoIds])
 
   const handleRetry = useCallback(() => {
     refetch()
@@ -147,9 +160,8 @@ export function RepoList({ onSelectRepo, className }: RepoListProps) {
       {/* Results count */}
       {!isLoading && !error && repos && repos.length > 0 && (
         <p className="text-xs text-muted-foreground text-center pt-2">
-          {searchQuery.trim()
-            ? `${filteredRepos.length} sur ${repos.length} repositories`
-            : `${repos.length} repositories`}
+          {filteredRepos.length} repositories disponibles
+          {searchQuery.trim() && ` (recherche)`}
         </p>
       )}
     </div>

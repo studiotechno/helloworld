@@ -9,4 +9,5 @@ export { useConversations, useConversation, useCreateConversation, useDeleteConv
 export { useNewConversationShortcut } from './use-keyboard-shortcuts'
 export { useAnalysisLoader } from './use-analysis-loader'
 export { useIndexingStatus, getStatusLabel, getStatusColor } from './useIndexingStatus'
+export { useIndexedRepos } from './useIndexedRepos'
 // export { useExport } from './useExport'

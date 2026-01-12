@@ -29,7 +29,7 @@ function formatLastIndexedDate(dateString: string | undefined): string | null {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffMinutes < 1) return "A l'instant"
+  if (diffMinutes < 1) return "à l'instant"
   if (diffMinutes < 60) return `il y a ${diffMinutes} min`
   if (diffHours < 24) return `il y a ${diffHours}h`
   if (diffDays === 1) return 'Hier'

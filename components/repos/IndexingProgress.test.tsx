@@ -283,7 +283,7 @@ describe('IndexingProgress', () => {
       render(<IndexingProgress repositoryId="repo-123" compact />)
 
       await waitFor(() => {
-        expect(screen.getByText('Indexe')).toBeInTheDocument()
+        expect(screen.getByText('Indexé')).toBeInTheDocument()
       })
     })
 
