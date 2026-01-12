@@ -39,6 +39,12 @@ export interface IndexingStatusData {
   isIndexed?: boolean
   startedAt?: string
   completedAt?: string
+  // Commit tracking
+  lastIndexedCommitSha?: string
+  lastIndexedCommitShort?: string
+  latestCommitSha?: string
+  latestCommitShort?: string
+  hasNewerCommit?: boolean
   stats?: {
     totalChunks: number
     totalFiles: number

@@ -53,6 +53,7 @@ export interface PipelineResult {
   chunksCreated: number
   filesProcessed: number
   filesTotal: number
+  commitSha?: string
   error?: string
 }
 
@@ -72,6 +73,7 @@ export async function runIndexationPipeline(
   let filesProcessed = 0
   let filesTotal = 0
   let chunksCreated = 0
+  let commitSha = ''
 
   try {
     // Phase 1: Fetch repository structure
@@ -79,17 +81,19 @@ export async function runIndexationPipeline(
 
     const structure = await fetchRepositoryStructure(accessToken, owner, repo, branch)
     filesTotal = structure.files.length
+    commitSha = structure.commitSha
 
     // Update job with total files
     await markJobStarted(jobId, filesTotal)
 
     if (structure.files.length === 0) {
-      await markJobCompleted(jobId, 0)
+      await markJobCompleted(jobId, 0, commitSha)
       return {
         success: true,
         chunksCreated: 0,
         filesProcessed: 0,
         filesTotal: 0,
+        commitSha,
       }
     }
 
@@ -107,12 +111,13 @@ export async function runIndexationPipeline(
     )
 
     if (filterResult.isEmpty) {
-      await markJobCompleted(jobId, 0)
+      await markJobCompleted(jobId, 0, commitSha)
       return {
         success: true,
         chunksCreated: 0,
         filesProcessed: 0,
         filesTotal: filesTotal,
+        commitSha,
       }
     }
 
@@ -187,12 +192,13 @@ export async function runIndexationPipeline(
     }
 
     if (allChunks.length === 0) {
-      await markJobCompleted(jobId, 0)
+      await markJobCompleted(jobId, 0, commitSha)
       return {
         success: true,
         chunksCreated: 0,
         filesProcessed,
         filesTotal,
+        commitSha,
       }
     }
 
@@ -273,7 +279,7 @@ export async function runIndexationPipeline(
     }
 
     // Mark job as completed
-    await markJobCompleted(jobId, chunksCreated)
+    await markJobCompleted(jobId, chunksCreated, commitSha)
     onProgress?.('Finalizing', 100, `Indexation complete: ${chunksCreated} chunks created`)
 
     return {
@@ -281,6 +287,7 @@ export async function runIndexationPipeline(
       chunksCreated,
       filesProcessed,
       filesTotal,
+      commitSha,
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -292,6 +299,7 @@ export async function runIndexationPipeline(
       chunksCreated,
       filesProcessed,
       filesTotal,
+      commitSha: commitSha || undefined,
       error: errorMessage,
     }
   }

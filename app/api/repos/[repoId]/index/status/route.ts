@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { getJobByRepository, getRepositoryIndexStats, isRepositoryIndexed } from '@/lib/indexing'
+import { fetchLatestCommitSha } from '@/lib/github/fetch-repository-files'
 
 interface RouteParams {
   params: Promise<{ repoId: string }>
@@ -23,9 +24,14 @@ export async function GET(req: Request, { params }: RouteParams) {
       )
     }
 
-    // Verify the repository belongs to the user
+    // Verify the repository belongs to the user and get user's GitHub token
     const repository = await prisma.repositories.findUnique({
       where: { id: repoId },
+      include: {
+        user: {
+          select: { github_token: true },
+        },
+      },
     })
 
     if (!repository) {
@@ -40,6 +46,26 @@ export async function GET(req: Request, { params }: RouteParams) {
         { error: { code: 'FORBIDDEN', message: 'Acces refuse' } },
         { status: 403 }
       )
+    }
+
+    // Parse owner/repo from full_name
+    const [owner, repoName] = repository.full_name.split('/')
+    const githubToken = repository.user.github_token
+
+    // Helper to fetch latest commit (with error handling)
+    const getLatestCommit = async (): Promise<string | null> => {
+      if (!githubToken) return null
+      try {
+        return await fetchLatestCommitSha(
+          githubToken,
+          owner,
+          repoName,
+          repository.default_branch
+        )
+      } catch (error) {
+        console.error('[API] Failed to fetch latest commit:', error)
+        return null
+      }
     }
 
     // Get the current job status
@@ -84,9 +110,23 @@ export async function GET(req: Request, { params }: RouteParams) {
       response.error = job.errorMessage
     }
 
-    // Add stats if completed
+    // Add stats and commit info if completed
     if (job.status === 'completed') {
       response.stats = await getRepositoryIndexStats(repoId)
+
+      // Add indexed commit info
+      if (job.lastIndexedCommitSha) {
+        response.lastIndexedCommitSha = job.lastIndexedCommitSha
+        response.lastIndexedCommitShort = job.lastIndexedCommitSha.substring(0, 7)
+
+        // Check if there's a newer commit
+        const latestCommit = await getLatestCommit()
+        if (latestCommit) {
+          response.latestCommitSha = latestCommit
+          response.latestCommitShort = latestCommit.substring(0, 7)
+          response.hasNewerCommit = latestCommit !== job.lastIndexedCommitSha
+        }
+      }
     }
 
     return NextResponse.json(response)

@@ -44,6 +44,7 @@ export interface FetchFilesResult {
   totalCount: number
   fetchedCount: number
   rateLimitRemaining: number
+  commitSha: string
 }
 
 export interface FetchFilesOptions {
@@ -81,8 +82,8 @@ export async function fetchRepositoryFiles(
   // Get the default branch if not specified
   const targetBranch = branch || await getDefaultBranch(octokit, owner, repo)
 
-  // Get the tree SHA for the branch
-  const treeSha = await getBranchTreeSha(octokit, owner, repo, targetBranch)
+  // Get the tree SHA and commit SHA for the branch
+  const { treeSha, commitSha } = await getBranchInfo(octokit, owner, repo, targetBranch)
 
   // Fetch the entire tree recursively
   const { data } = await octokit.rest.git.getTree({
@@ -122,6 +123,7 @@ export async function fetchRepositoryFiles(
     totalCount: fileEntries.length,
     fetchedCount: files.length,
     rateLimitRemaining: rateLimit.remaining,
+    commitSha,
   }
 }
 
@@ -138,28 +140,33 @@ async function getDefaultBranch(
 }
 
 /**
- * Get the tree SHA for a branch
+ * Get the tree SHA and commit SHA for a branch
  */
-async function getBranchTreeSha(
+async function getBranchInfo(
   octokit: Octokit,
   owner: string,
   repo: string,
   branch: string
-): Promise<string> {
+): Promise<{ treeSha: string; commitSha: string }> {
   const { data } = await octokit.rest.git.getRef({
     owner,
     repo,
     ref: `heads/${branch}`,
   })
 
+  const commitSha = data.object.sha
+
   // Get commit to get tree SHA
   const { data: commit } = await octokit.rest.git.getCommit({
     owner,
     repo,
-    commit_sha: data.object.sha,
+    commit_sha: commitSha,
   })
 
-  return commit.tree.sha
+  return {
+    treeSha: commit.tree.sha,
+    commitSha,
+  }
 }
 
 /**
@@ -375,6 +382,7 @@ export async function fetchRepositoryStructure(
   estimatedLines: number
   isLarge: boolean
   gitignore: string | null
+  commitSha: string
 }> {
   const result = await fetchRepositoryFiles(accessToken, owner, repo, { branch })
 
@@ -390,5 +398,27 @@ export async function fetchRepositoryStructure(
     estimatedLines,
     isLarge,
     gitignore,
+    commitSha: result.commitSha,
   }
+}
+
+/**
+ * Fetch only the latest commit SHA for a branch (lightweight)
+ */
+export async function fetchLatestCommitSha(
+  accessToken: string,
+  owner: string,
+  repo: string,
+  branch?: string
+): Promise<string> {
+  const octokit = createGitHubClient(accessToken)
+  const targetBranch = branch || await getDefaultBranch(octokit, owner, repo)
+
+  const { data } = await octokit.rest.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${targetBranch}`,
+  })
+
+  return data.object.sha
 }

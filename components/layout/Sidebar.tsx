@@ -247,9 +247,6 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </kbd>
               {' '}pour réduire
             </p>
-            <p className="text-center text-[10px] text-muted-foreground/50">
-              v{APP_VERSION}
-            </p>
           </div>
         )}
       </aside>

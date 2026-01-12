@@ -100,6 +100,9 @@ model indexing_jobs {
   current_phase String? // "Fetching files", "Parsing code", "Generating embeddings"
   error_message String? @db.Text
 
+  // Commit tracking for detecting updates
+  last_indexed_commit_sha String? // SHA of the commit when indexation completed
+
   started_at   DateTime? @db.Timestamptz(6)
   completed_at DateTime? @db.Timestamptz(6)
   created_at   DateTime  @default(now()) @db.Timestamptz(6)

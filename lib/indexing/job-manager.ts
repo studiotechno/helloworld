@@ -39,6 +39,7 @@ export interface IndexingJob {
   chunksCreated: number
   currentPhase: JobPhase | null
   errorMessage: string | null
+  lastIndexedCommitSha: string | null
   startedAt: Date | null
   completedAt: Date | null
   createdAt: Date
@@ -72,6 +73,7 @@ function toIndexingJob(job: indexing_jobs): IndexingJob {
     chunksCreated: job.chunks_created,
     currentPhase: job.current_phase as JobPhase | null,
     errorMessage: job.error_message,
+    lastIndexedCommitSha: job.last_indexed_commit_sha,
     startedAt: job.started_at,
     completedAt: job.completed_at,
     createdAt: job.created_at,
@@ -258,7 +260,8 @@ export async function markJobStarted(
  */
 export async function markJobCompleted(
   jobId: string,
-  chunksCreated: number
+  chunksCreated: number,
+  commitSha?: string
 ): Promise<IndexingJob> {
   const job = await prisma.indexing_jobs.update({
     where: { id: jobId },
@@ -268,6 +271,7 @@ export async function markJobCompleted(
       chunks_created: chunksCreated,
       current_phase: null,
       completed_at: new Date(),
+      last_indexed_commit_sha: commitSha || null,
     },
   })
 
