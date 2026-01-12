@@ -6,4 +6,5 @@ export {
   ASSISTANT_ROLE,
   FORMATTING_RULES,
   CITATION_FORMAT,
+  type UserInstructionsContext,
 } from './base'

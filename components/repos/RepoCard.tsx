@@ -119,7 +119,7 @@ export function RepoCard({
           )}
           {repo.private && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
-              Prive
+              Privé
             </span>
           )}
         </div>

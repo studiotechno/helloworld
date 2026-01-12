@@ -25,8 +25,24 @@ model users {
   // Relations (to be added in future stories)
   repositories  repositories[]
   conversations conversations[]
+  instructions  user_instructions?
 
   @@map("users")
+}
+
+// User Instructions table - stores personalized context for AI responses
+model user_instructions {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id              String   @unique @db.Uuid
+  profile_instructions String?  @db.Text // Who the user is (PM, tech level, preferences)
+  team_instructions    String?  @db.Text // Team structure, workflow, methodology
+  created_at           DateTime @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("user_instructions")
 }
 
 // Repositories table - stores connected GitHub repositories

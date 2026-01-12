@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, FolderGit2, BookOpen } from 'lucide-react'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { useRepoTechnologies } from '@/hooks/useRepoTechnologies'
 import { useNewConversationShortcut } from '@/hooks/use-keyboard-shortcuts'
@@ -94,12 +94,36 @@ function MobileSidebarContent({ onClose }: MobileSidebarContentProps) {
       <button
         onClick={() => {
           onClose()
-          // Navigate handled by router
+          window.location.href = '/chat'
         }}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-[var(--glow-pink)] transition-shadow hover:shadow-[0_0_30px_oklch(0.656_0.241_354.308_/_60%)]"
       >
         <span>Nouvelle conversation</span>
       </button>
+
+      {/* Navigation Links */}
+      <div className="mt-4 space-y-2">
+        <button
+          onClick={() => {
+            onClose()
+            window.location.href = '/repos'
+          }}
+          className="flex w-full items-center gap-2 rounded-xl border border-border/50 px-4 py-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          <FolderGit2 className="size-4" />
+          <span>Repositories</span>
+        </button>
+        <button
+          onClick={() => {
+            onClose()
+            window.location.href = '/docs'
+          }}
+          className="flex w-full items-center gap-2 rounded-xl border border-border/50 px-4 py-3 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+        >
+          <BookOpen className="size-4" />
+          <span>Documentation</span>
+        </button>
+      </div>
 
       {/* Conversation List Placeholder */}
       <div className="mt-4">
@@ -108,7 +132,6 @@ function MobileSidebarContent({ onClose }: MobileSidebarContentProps) {
         </p>
         <div className="mt-2 rounded-xl border border-dashed border-border/50 p-4 text-center">
           <p className="text-sm text-muted-foreground">Aucune conversation</p>
-          <p className="mt-1 text-xs text-muted-foreground/70">Epic 3</p>
         </div>
       </div>
     </div>

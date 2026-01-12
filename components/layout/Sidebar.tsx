@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Sparkles,
   FolderGit2,
+  BookOpen,
   Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -160,6 +161,28 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             {isCollapsed && (
               <TooltipContent side="right">
                 <p>Repositories</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+
+          {/* Documentation Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => router.push('/docs')}
+                className={cn(
+                  'w-full gap-2 rounded-xl border-border/50 hover:bg-accent hover:text-accent-foreground',
+                  isCollapsed && 'justify-center px-2'
+                )}
+              >
+                <BookOpen className="size-4 shrink-0" />
+                {!isCollapsed && <span>Documentation</span>}
+              </Button>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                <p>Documentation</p>
               </TooltipContent>
             )}
           </Tooltip>

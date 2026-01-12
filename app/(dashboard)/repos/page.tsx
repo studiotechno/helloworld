@@ -96,7 +96,7 @@ export default function ReposPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Selectionnez un repository
+              Séléctionnez un repository
             </h1>
             <p className="text-sm text-muted-foreground">
               Choisissez le repository GitHub que vous souhaitez analyser

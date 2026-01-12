@@ -80,15 +80,15 @@ describe('RepoCard', () => {
     expect(screen.queryByText('TypeScript')).not.toBeInTheDocument()
   })
 
-  it('should show "Prive" badge for private repos', () => {
+  it('should show "Privé" badge for private repos', () => {
     const privateRepo = { ...mockRepo, private: true }
     render(<RepoCard repo={privateRepo} />, { wrapper: createWrapper() })
-    expect(screen.getByText('Prive')).toBeInTheDocument()
+    expect(screen.getByText('Privé')).toBeInTheDocument()
   })
 
-  it('should not show "Prive" badge for public repos', () => {
+  it('should not show "Privé" badge for public repos', () => {
     render(<RepoCard repo={mockRepo} />, { wrapper: createWrapper() })
-    expect(screen.queryByText('Prive')).not.toBeInTheDocument()
+    expect(screen.queryByText('Privé')).not.toBeInTheDocument()
   })
 
   it('should call onClick when clicked', () => {

@@ -184,6 +184,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // Get user instructions for personalized responses
+    const userInstructions = await prisma.user_instructions.findUnique({
+      where: { user_id: user.id },
+      select: { profile_instructions: true, team_instructions: true },
+    })
+
     // RAG: Retrieve relevant code chunks if repository is indexed
     let codeContext = ''
     let retrievedChunks: RetrievedChunk[] = []
@@ -229,8 +235,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Build the system prompt with confidence handling and repo context
-    let systemPrompt = buildSystemPromptWithContext(repoContext)
+    // Build the system prompt with confidence handling, repo context, and user instructions
+    let systemPrompt = buildSystemPromptWithContext(repoContext, userInstructions ?? undefined)
 
     // Add code context to system prompt if available
     if (codeContext) {

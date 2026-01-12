@@ -72,13 +72,51 @@ ${CITATION_FORMAT}`
 }
 
 /**
- * Builds a system prompt with optional repository context
+ * User instructions context for personalized responses
  */
-export function buildSystemPromptWithContext(repoContext?: {
-  name: string
-  branch: string
-}): string {
+export interface UserInstructionsContext {
+  profile_instructions?: string | null
+  team_instructions?: string | null
+}
+
+/**
+ * Builds a system prompt with optional repository and user context
+ */
+export function buildSystemPromptWithContext(
+  repoContext?: {
+    name: string
+    branch: string
+  },
+  userInstructions?: UserInstructionsContext
+): string {
   let prompt = buildBaseSystemPrompt()
+
+  // Add user instructions for personalized responses
+  if (userInstructions?.profile_instructions || userInstructions?.team_instructions) {
+    prompt += `
+
+## Contexte de l'utilisateur
+
+Adapte tes reponses au contexte suivant:`
+
+    if (userInstructions.profile_instructions) {
+      prompt += `
+
+### Profil de l'utilisateur
+${userInstructions.profile_instructions}`
+    }
+
+    if (userInstructions.team_instructions) {
+      prompt += `
+
+### Equipe de l'utilisateur
+${userInstructions.team_instructions}`
+    }
+
+    prompt += `
+
+Utilise ces informations pour ajuster ton niveau technique, ton vocabulaire, et tes recommandations.`
+  }
 
   if (repoContext) {
     prompt += `
