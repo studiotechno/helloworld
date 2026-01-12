@@ -27,6 +27,17 @@ export default function ChatPage() {
   const [inputValue, setInputValue] = useState('')
   const [conversationId, setConversationId] = useState<string | null>(null)
   const previousStatusRef = useRef<string>('')
+  const previousRepoIdRef = useRef<string | undefined>(undefined)
+
+  // Reset chat when repo changes
+  useEffect(() => {
+    if (activeRepo?.id && previousRepoIdRef.current && activeRepo.id !== previousRepoIdRef.current) {
+      // Repo changed - reset conversation
+      setConversationId(null)
+      setInputValue('')
+    }
+    previousRepoIdRef.current = activeRepo?.id
+  }, [activeRepo?.id])
 
   // Create chat transport with our API endpoint
   // Include conversationId once we have it (after first message)
@@ -40,9 +51,10 @@ export default function ChatPage() {
   )
 
   // useChat hook from Vercel AI SDK v6
-  // Use conversationId as id so hook reinitializes when we get the conversation ID
+  // Include activeRepo.id in the chat id so messages reset when repo changes
+  const chatId = conversationId || `new-chat-${activeRepo?.id || 'none'}`
   const { messages, sendMessage, status, error } = useChat({
-    id: conversationId || 'new-chat',
+    id: chatId,
     transport,
     onError: (err) => {
       console.error('[Chat] Error:', err)
@@ -239,7 +251,7 @@ export default function ChatPage() {
 
       {/* Error display */}
       {error && (
-        <div className="mx-auto mb-2 max-w-[800px] rounded-lg bg-destructive/10 px-4 py-2 text-center text-sm text-destructive">
+        <div className="mx-auto mb-2 max-w-[1000px] rounded-lg bg-destructive/10 px-4 py-2 text-center text-sm text-destructive">
           {error.message || 'Une erreur est survenue'}
         </div>
       )}

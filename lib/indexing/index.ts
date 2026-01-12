@@ -40,3 +40,13 @@ export {
   type PipelineResult,
   type ChunkWithEmbedding,
 } from './pipeline'
+
+// Contextual Generator
+export {
+  generateChunkContext,
+  generateContextsBatch,
+  buildContextualContent,
+  estimateContextGenerationCost,
+  type ChunkForContext,
+  type FileContext,
+} from './contextual-generator'

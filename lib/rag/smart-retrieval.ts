@@ -1,9 +1,10 @@
 /**
  * Smart Retrieval for RAG
  *
- * Combines two strategies:
+ * Combines multiple strategies:
  * 1. Metadata-based retrieval for structured queries (endpoints, components, etc.)
- * 2. Vector search for open-ended queries
+ * 2. Hybrid search (vector + BM25 with RRF) for general queries
+ * 3. Symbol search for function/class name lookups
  *
  * This provides exhaustive results for "list all X" queries while maintaining
  * semantic search quality for specific questions.
@@ -11,7 +12,9 @@
 
 import { prisma } from '../db/prisma'
 import { classifyQuery, getMetadataFilter, type QueryType } from './query-classifier'
-import { retrieveRelevantChunks, type RetrievedChunk, type SearchOptions } from './retriever'
+import { retrieveRelevantChunks, type RetrievedChunk } from './retriever'
+import { hybridSearchV2, searchSymbols, toRetrievedChunks } from './hybrid-search'
+import { rerankChunks, getRerankSummary, type RerankOptions } from './reranker'
 import { Prisma } from '@prisma/client'
 
 // Increased limit for better coverage on generic queries
@@ -26,17 +29,29 @@ export interface SmartRetrievalOptions {
   /** Maximum chunks for metadata search (default: 100) */
   metadataLimit?: number
   /** Force a specific retrieval strategy */
-  forceStrategy?: 'vector' | 'metadata' | 'hybrid'
+  forceStrategy?: 'vector' | 'metadata' | 'hybrid' | 'hybrid_v2' | 'symbol'
   /** Minimum confidence to use metadata strategy (default: 0.3) */
   minConfidence?: number
+  /** Use optimized hybrid search v2 with RRF (default: true) */
+  useHybridV2?: boolean
+  /** RRF constant for hybrid search (default: 60) */
+  rrfK?: number
+  /** Enable reranking with Voyage AI (default: true) */
+  useReranking?: boolean
+  /** Rerank options */
+  rerankOptions?: RerankOptions
 }
 
 export interface SmartRetrievalResult {
   chunks: RetrievedChunk[]
-  strategy: 'vector' | 'metadata' | 'hybrid'
+  strategy: 'vector' | 'metadata' | 'hybrid' | 'hybrid_v2' | 'symbol'
   queryType: QueryType
   isListQuery: boolean
   totalFound: number
+  /** Whether reranking was applied */
+  reranked: boolean
+  /** Number of chunks before reranking */
+  chunksBeforeRerank?: number
 }
 
 /**
@@ -118,6 +133,16 @@ function deduplicateChunks(chunks: RetrievedChunk[]): RetrievedChunk[] {
 }
 
 /**
+ * Detect if a query looks like a symbol/identifier lookup
+ */
+function isSymbolQuery(query: string): boolean {
+  const trimmed = query.trim()
+  // Check for identifier pattern (camelCase, snake_case, PascalCase)
+  const identifierPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/
+  return identifierPattern.test(trimmed)
+}
+
+/**
  * Smart retrieval that automatically chooses the best strategy
  */
 export async function smartRetrieve(
@@ -130,21 +155,31 @@ export async function smartRetrieve(
     metadataLimit = MAX_METADATA_CHUNKS,
     forceStrategy,
     minConfidence = 0.3,
+    useHybridV2 = true, // Use optimized hybrid search by default
+    rrfK = 60,
+    useReranking = true, // Enable reranking by default
+    rerankOptions = {},
   } = options
 
   // Classify the query
   const { type: queryType, isListQuery, confidence } = classifyQuery(query)
 
   // Determine strategy
-  let strategy: 'vector' | 'metadata' | 'hybrid'
+  let strategy: 'vector' | 'metadata' | 'hybrid' | 'hybrid_v2' | 'symbol'
 
   if (forceStrategy) {
     strategy = forceStrategy
+  } else if (isSymbolQuery(query)) {
+    // Query looks like a symbol/identifier → try symbol search first
+    strategy = 'symbol'
   } else if (queryType !== 'GENERIC' && isListQuery && confidence >= minConfidence) {
     // List query with detected type → metadata-based
     strategy = 'metadata'
+  } else if (useHybridV2) {
+    // Use optimized hybrid search with RRF by default
+    strategy = 'hybrid_v2'
   } else if (queryType !== 'GENERIC' && confidence >= minConfidence) {
-    // Specific type detected but not a list query → hybrid
+    // Specific type detected but not a list query → legacy hybrid
     strategy = 'hybrid'
   } else {
     // Generic query → vector search
@@ -159,8 +194,44 @@ export async function smartRetrieve(
       chunks = await retrieveByMetadata(repositoryId, queryType, metadataLimit)
       break
 
+    case 'symbol':
+      // Symbol search with fallback to hybrid
+      const symbolResults = await searchSymbols(query, repositoryId)
+      if (symbolResults.length > 0) {
+        chunks = symbolResults.map(r => ({
+          id: r.id,
+          filePath: r.filePath,
+          startLine: r.startLine,
+          endLine: r.endLine,
+          content: r.content,
+          language: r.language,
+          chunkType: r.chunkType,
+          symbolName: r.symbolName,
+          context: r.context,
+          score: r.similarity,
+        }))
+      } else {
+        // Fallback to hybrid_v2 if no symbols found
+        const hybridResults = await hybridSearchV2(query, repositoryId, {
+          limit: vectorLimit,
+          rrfK,
+        })
+        chunks = toRetrievedChunks(hybridResults)
+        strategy = 'hybrid_v2' // Update strategy to reflect actual method used
+      }
+      break
+
+    case 'hybrid_v2':
+      // Optimized hybrid search with RRF fusion
+      const v2Results = await hybridSearchV2(query, repositoryId, {
+        limit: vectorLimit,
+        rrfK,
+      })
+      chunks = toRetrievedChunks(v2Results)
+      break
+
     case 'hybrid':
-      // Combine metadata and vector search
+      // Legacy: Combine metadata and vector search
       const [metadataChunks, vectorChunks] = await Promise.all([
         retrieveByMetadata(repositoryId, queryType, Math.floor(metadataLimit / 2)),
         retrieveRelevantChunks(query, repositoryId, { limit: Math.floor(vectorLimit / 2) }),
@@ -179,12 +250,36 @@ export async function smartRetrieve(
       break
   }
 
+  // Apply reranking if enabled and we have enough chunks
+  const chunksBeforeRerank = chunks.length
+  let reranked = false
+
+  if (useReranking && chunks.length > 3) {
+    try {
+      const rerankedChunks = await rerankChunks(query, chunks, {
+        topK: rerankOptions.topK ?? 15,
+        minScore: rerankOptions.minScore ?? 0,
+        model: rerankOptions.model ?? 'rerank-2.5',
+      })
+      chunks = rerankedChunks
+      reranked = true
+
+      // Log rerank summary
+      console.log(getRerankSummary(chunksBeforeRerank, rerankedChunks))
+    } catch (error) {
+      // Log but don't fail - use original chunks
+      console.error('[SmartRetrieval] Reranking failed, using original order:', error)
+    }
+  }
+
   return {
     chunks,
     strategy,
     queryType,
     isListQuery,
     totalFound: chunks.length,
+    reranked,
+    chunksBeforeRerank: reranked ? chunksBeforeRerank : undefined,
   }
 }
 
@@ -192,9 +287,10 @@ export async function smartRetrieve(
  * Get a summary of what was retrieved for logging/debugging
  */
 export function getRetrievalSummary(result: SmartRetrievalResult): string {
-  const { strategy, queryType, isListQuery, totalFound, chunks } = result
+  const { strategy, queryType, isListQuery, totalFound, chunks, reranked, chunksBeforeRerank } = result
 
   const uniqueFiles = new Set(chunks.map((c) => c.filePath)).size
+  const rerankInfo = reranked ? `, Reranked: ${chunksBeforeRerank} → ${totalFound}` : ''
 
-  return `[SmartRetrieval] Strategy: ${strategy}, Type: ${queryType}, ListQuery: ${isListQuery}, Found: ${totalFound} chunks across ${uniqueFiles} files`
+  return `[SmartRetrieval] Strategy: ${strategy}, Type: ${queryType}, ListQuery: ${isListQuery}, Found: ${totalFound} chunks across ${uniqueFiles} files${rerankInfo}`
 }

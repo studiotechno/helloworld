@@ -40,6 +40,18 @@ yarn-error.log*
 # vercel
 .vercel
 
+# b mad
+.bmad-core
+_bmad
+_bmad-output
+.agent
+
+# claude
+.claude
+
+# docs
+docs/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

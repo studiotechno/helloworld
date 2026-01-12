@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConversations, useDeleteConversation, useRenameConversation, type Conversation } from '@/hooks/use-conversations'
+import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { groupConversationsByDate, DATE_GROUP_LABELS, DATE_GROUP_ORDER } from '@/lib/utils/date-groups'
 import { ConversationItem } from './ConversationItem'
 import { DeleteConversationDialog } from './DeleteConversationDialog'
@@ -31,7 +32,8 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const { data: conversations, isLoading: conversationsLoading } = useConversations()
+  const { data: activeRepo } = useActiveRepo()
+  const { data: conversations, isLoading: conversationsLoading } = useConversations(activeRepo?.id)
   const deleteConversation = useDeleteConversation()
   const renameConversation = useRenameConversation()
 

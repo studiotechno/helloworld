@@ -18,10 +18,11 @@ import {
   filterFiles,
 } from '../parsing/file-filter'
 import {
-  chunkFile,
+  chunkFileAST,
   calculateFileHash,
   type CodeChunk,
-} from '../parsing/chunker'
+  initTreeSitter,
+} from '../parsing'
 import { embedCode } from '../embeddings/voyage-client'
 import {
   markJobStarted,
@@ -31,6 +32,11 @@ import {
   updateJobStatus,
   type JobPhase,
 } from './job-manager'
+import {
+  generateContextsBatch,
+  buildContextualContent,
+  type ChunkForContext,
+} from './contextual-generator'
 
 // Batch sizes for different operations
 const FILE_FETCH_BATCH_SIZE = 10
@@ -46,6 +52,8 @@ export interface PipelineOptions {
   branch?: string
   jobId: string
   onProgress?: (phase: JobPhase, progress: number, message: string) => void
+  /** Generate contextual descriptions for chunks using Haiku (default: true) */
+  useContextualRetrieval?: boolean
 }
 
 export interface PipelineResult {
@@ -60,6 +68,7 @@ export interface PipelineResult {
 export interface ChunkWithEmbedding extends CodeChunk {
   embedding: number[]
   file_hash: string
+  context?: string // Contextual description from LLM
 }
 
 /**
@@ -68,7 +77,16 @@ export interface ChunkWithEmbedding extends CodeChunk {
 export async function runIndexationPipeline(
   options: PipelineOptions
 ): Promise<PipelineResult> {
-  const { accessToken, repositoryId, owner, repo, branch, jobId, onProgress } = options
+  const {
+    accessToken,
+    repositoryId,
+    owner,
+    repo,
+    branch,
+    jobId,
+    onProgress,
+    useContextualRetrieval = true, // Enable by default
+  } = options
 
   let filesProcessed = 0
   let filesTotal = 0
@@ -76,6 +94,9 @@ export async function runIndexationPipeline(
   let commitSha = ''
 
   try {
+    // Initialize Tree-sitter for AST-based chunking
+    await initTreeSitter()
+
     // Phase 1: Fetch repository structure
     onProgress?.('Fetching files', 0, 'Analyzing repository structure...')
 
@@ -157,13 +178,13 @@ export async function runIndexationPipeline(
 
       const contents = await Promise.all(contentPromises)
 
-      // Chunk each file
+      // Chunk each file (using AST-based chunker)
       for (let j = 0; j < batch.length; j++) {
         const content = contents[j]
         if (!content) continue
 
         const fileHash = calculateFileHash(content.content)
-        const chunks = chunkFile(content.content, content.path)
+        const chunks = await chunkFileAST(content.content, content.path)
 
         // Add file hash to each chunk (embedding will be added later)
         for (const chunk of chunks) {
@@ -202,14 +223,56 @@ export async function runIndexationPipeline(
       }
     }
 
+    // Phase 3.5: Generate contextual descriptions (optional)
+    if (useContextualRetrieval) {
+      onProgress?.('Generating context', 50, `Generating contextual descriptions for ${allChunks.length} chunks...`)
+
+      // Convert chunks to context format
+      const chunksForContext: ChunkForContext[] = allChunks.map(chunk => ({
+        content: chunk.content,
+        filePath: chunk.file_path,
+        startLine: chunk.start_line,
+        endLine: chunk.end_line,
+        chunkType: chunk.chunk_type,
+        symbolName: chunk.symbol_name,
+        language: chunk.language,
+      }))
+
+      // Generate contexts in batch with progress callback
+      const contexts = await generateContextsBatch(
+        chunksForContext,
+        undefined, // No file context for now (would need to refactor to keep file contents)
+        (completed, total) => {
+          const contextProgress = 50 + Math.round((completed / total) * 10)
+          onProgress?.(
+            'Generating context',
+            contextProgress,
+            `Generated context for ${completed}/${total} chunks`
+          )
+        }
+      )
+
+      // Attach contexts to chunks
+      for (let i = 0; i < allChunks.length; i++) {
+        allChunks[i].context = contexts[i] || undefined
+      }
+
+      onProgress?.('Generating context', 60, `Context generation complete for ${allChunks.length} chunks`)
+    }
+
     // Phase 4: Generate embeddings
-    onProgress?.('Generating embeddings', 50, `Generating embeddings for ${allChunks.length} chunks...`)
+    const embeddingStartProgress = useContextualRetrieval ? 60 : 50
+    onProgress?.('Generating embeddings', embeddingStartProgress, `Generating embeddings for ${allChunks.length} chunks...`)
     await updateJobStatus(jobId, 'embedding', { phase: 'Generating embeddings' })
 
     // Process embeddings in batches with delay to avoid rate limiting
     for (let i = 0; i < allChunks.length; i += CHUNK_BATCH_SIZE) {
       const batch = allChunks.slice(i, i + CHUNK_BATCH_SIZE)
-      const contents = batch.map(chunk => chunk.content)
+
+      // Build content with context prepended (if available)
+      const contents = batch.map(chunk =>
+        buildContextualContent(chunk.content, chunk.context)
+      )
 
       // Generate embeddings
       const embeddings = await embedCode(contents)
@@ -219,8 +282,9 @@ export async function runIndexationPipeline(
         batch[j].embedding = embeddings[j]
       }
 
-      // Update progress
-      const embeddingProgress = 50 + Math.round(((i + batch.length) / allChunks.length) * 45)
+      // Update progress (start from 60 if context was generated, 50 otherwise)
+      const embeddingProgressRange = useContextualRetrieval ? 35 : 45 // 60-95 or 50-95
+      const embeddingProgress = embeddingStartProgress + Math.round(((i + batch.length) / allChunks.length) * embeddingProgressRange)
       await updateJobProgress(jobId, {
         progress: embeddingProgress,
         currentPhase: 'Generating embeddings',
@@ -255,7 +319,7 @@ export async function runIndexationPipeline(
             INSERT INTO code_chunks (
               id, repository_id, file_path, start_line, end_line,
               content, language, chunk_type, symbol_name, dependencies,
-              file_hash, embedding, created_at
+              context, file_hash, embedding, created_at
             ) VALUES (
               gen_random_uuid(),
               ${repositoryId}::uuid,
@@ -267,6 +331,7 @@ export async function runIndexationPipeline(
               ${chunk.chunk_type},
               ${chunk.symbol_name || null},
               ${chunk.dependencies},
+              ${chunk.context || null},
               ${chunk.file_hash},
               ${`[${chunk.embedding.join(',')}]`}::vector,
               NOW()

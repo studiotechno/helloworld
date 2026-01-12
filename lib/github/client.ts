@@ -11,25 +11,86 @@ export function createGitHubClient(accessToken: string): Octokit {
   })
 }
 
-// Fetch user's repositories
+// Fetch user's repositories (including organization repos)
 export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]> {
   const octokit = createGitHubClient(accessToken)
 
-  // Fetch all repos user has access to (includes private repos)
-  const { data } = await octokit.rest.repos.listForAuthenticatedUser({
+  // 1. Fetch user's own repos and collaborator repos
+  const userRepos = await octokit.paginate(octokit.rest.repos.listForAuthenticatedUser, {
     sort: 'pushed',
     direction: 'desc',
     per_page: 100,
+    affiliation: 'owner,collaborator,organization_member',
   })
 
-  return data.map((repo) => ({
+  console.log(`[GitHub] Fetched ${userRepos.length} repos from listForAuthenticatedUser`)
+
+  // 2. Fetch organizations the user belongs to
+  try {
+    // First try to get orgs with detailed response
+    const orgsResponse = await octokit.rest.orgs.listForAuthenticatedUser({
+      per_page: 100,
+    })
+    console.log(`[GitHub] Orgs API response status: ${orgsResponse.status}`)
+    console.log(`[GitHub] Orgs API response headers:`, JSON.stringify(orgsResponse.headers['x-oauth-scopes']))
+    console.log(`[GitHub] Orgs raw data:`, JSON.stringify(orgsResponse.data.map(o => o.login)))
+  } catch (e) {
+    console.error(`[GitHub] Error fetching orgs details:`, e)
+  }
+
+  const orgs = await octokit.paginate(octokit.rest.orgs.listForAuthenticatedUser, {
+    per_page: 100,
+  })
+
+  console.log(`[GitHub] User belongs to ${orgs.length} organizations: ${orgs.map(o => o.login).join(', ')}`)
+
+  // 3. Fetch repos from each organization
+  const orgReposPromises = orgs.map(async (org) => {
+    try {
+      const repos = await octokit.paginate(octokit.rest.repos.listForOrg, {
+        org: org.login,
+        sort: 'pushed',
+        direction: 'desc',
+        per_page: 100,
+      })
+      console.log(`[GitHub] Fetched ${repos.length} repos from org ${org.login}`)
+      return repos
+    } catch (error) {
+      console.error(`[GitHub] Error fetching repos from org ${org.login}:`, error)
+      return []
+    }
+  })
+
+  const orgReposArrays = await Promise.all(orgReposPromises)
+  const orgRepos = orgReposArrays.flat()
+
+  // 4. Combine and deduplicate by repo ID
+  const allRepos = [...userRepos, ...orgRepos]
+  const uniqueReposMap = new Map<number, typeof allRepos[0]>()
+  for (const repo of allRepos) {
+    if (!uniqueReposMap.has(repo.id)) {
+      uniqueReposMap.set(repo.id, repo)
+    }
+  }
+
+  const uniqueRepos = Array.from(uniqueReposMap.values())
+  console.log(`[GitHub] Total unique repos: ${uniqueRepos.length}`)
+
+  // Sort by pushed_at descending
+  uniqueRepos.sort((a, b) => {
+    const dateA = a.pushed_at ? new Date(a.pushed_at).getTime() : 0
+    const dateB = b.pushed_at ? new Date(b.pushed_at).getTime() : 0
+    return dateB - dateA
+  })
+
+  return uniqueRepos.map((repo) => ({
     id: repo.id,
     name: repo.name,
     full_name: repo.full_name,
     description: repo.description,
     private: repo.private,
-    language: repo.language,
-    default_branch: repo.default_branch,
+    language: repo.language ?? null,
+    default_branch: repo.default_branch ?? 'main',
     updated_at: repo.updated_at ?? '',
     pushed_at: repo.pushed_at ?? '',
     size: repo.size ?? 0,

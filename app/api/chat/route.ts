@@ -1,5 +1,4 @@
 import { streamText } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
@@ -12,6 +11,7 @@ import {
   extractCitations,
   type RetrievedChunk,
 } from '@/lib/rag'
+import { getModelForQuery, logRouting } from '@/lib/ai'
 
 // Part schema for AI SDK v6 message format
 // Accept any part type (text, tool_call, tool_result, etc.)
@@ -241,12 +241,27 @@ export async function POST(req: Request) {
 
 Le repository n'est pas encore indexe. Tu ne disposes pas du contexte du code source.
 Reponds du mieux possible en te basant sur les informations generales, et suggere a l'utilisateur de patienter pendant l'indexation.`
+    } else if (repoId && isIndexed && retrievedChunks.length === 0) {
+      // Indexed but no relevant code found for this query
+      systemPrompt += `\n\n## Contexte code
+
+Aucun code pertinent n'a ete trouve pour cette question dans le repository indexe.
+NE REPONDS PAS avec des exemples generiques ou inventes. Dis simplement que tu n'as pas trouve cette information dans le code.`
     }
 
-    // Stream the response using Anthropic Claude
+    // Route to appropriate model based on query complexity
+    // Estimate context tokens (roughly 4 chars per token)
+    const estimatedContextTokens = Math.ceil(codeContext.length / 4)
+    const { model, analysis } = getModelForQuery(lastUserContent, estimatedContextTokens)
+
+    // Log routing decision
+    logRouting(analysis, lastUserContent)
+    console.log(`[API] [ModelRouter] Using ${analysis.model.toUpperCase()} (context: ~${estimatedContextTokens} tokens)`)
+
+    // Stream the response using the selected model
     // Optimization: Reduced maxOutputTokens from 4096 to 2048
     const result = await streamText({
-      model: anthropic('claude-sonnet-4-20250514'),
+      model,
       messages,
       system: systemPrompt,
       maxOutputTokens: 2048,

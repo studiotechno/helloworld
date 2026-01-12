@@ -2,15 +2,20 @@
 stepsCompleted: [1, 2, 3, 4, 6, 7, 8, 9, 10, 11]
 inputDocuments:
   - docs/brainstorming-session-results.md
+  - _bmad-output/planning-artifacts/research-universal-code-rag.md
 documentCounts:
   briefs: 0
-  research: 0
+  research: 1
   brainstorming: 1
   projectDocs: 0
 workflowType: 'prd'
 lastStep: 11
 status: complete
 completedAt: 2026-01-09
+lastUpdated: 2026-01-12
+updates:
+  - date: 2026-01-12
+    description: "Ajout feature Universal Code Understanding (RAG avancé)"
 ---
 
 # Product Requirements Document - antoineoriol
@@ -23,6 +28,8 @@ completedAt: 2026-01-09
 Un chatbot conversationnel qui permet aux Product Managers de dialoguer en langage naturel avec leur codebase GitHub. L'utilisateur pose ses questions comme il parlerait à un collègue ; le système répond avec précision et vocabulaire professionnel.
 
 **Vision :** Démocratiser l'accès à la compréhension technique sans vulgariser les réponses.
+
+**Capacité clé :** Le système peut répondre à **n'importe quelle question** sur une codebase grâce à une architecture RAG avancée combinant parsing AST, recherche hybride (sémantique + lexicale), et expansion contextuelle multi-fichiers.
 
 **Problème résolu :** Le code est une boîte noire pour ceux qui prennent des décisions produit. Cela crée une friction PM/Dev, des décisions sous-optimales, et une insécurité décisionnelle.
 
@@ -96,6 +103,7 @@ Un chatbot conversationnel qui permet aux Product Managers de dialoguer en langa
 - Connexion GitHub OAuth (SSO)
 - 1 repo par compte
 - Chat en langage naturel
+- **Universal Code Understanding** — répondre à n'importe quelle question sur le code
 - Réponses précises et pédagogues
 - Analyse dette technique (différenciateur clé)
 - Export des conversations (PDF/Markdown)
@@ -282,6 +290,174 @@ Aucun concurrent direct ne cible "non-tech parlant à leur codebase" :
 | Rate limits GitHub API | Technique | Cache court terme par session |
 | Repos trop volumineux | Technique | Limite initiale < 10k lignes |
 
+---
+
+## Universal Code Understanding
+
+### Objectif
+
+Permettre aux utilisateurs de poser **n'importe quelle question** sur leur codebase et obtenir une réponse précise, sans être limité à des catégories prédéfinies de questions.
+
+**Problème actuel :** L'approche par "familles de questions" (API routes, components, hooks, etc.) limite artificiellement les capacités du produit et crée de la friction quand l'utilisateur pose une question hors catégorie.
+
+**Solution :** Une architecture RAG (Retrieval-Augmented Generation) avancée qui comprend le code de manière universelle.
+
+### Architecture Technique
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    UNIVERSAL CODE UNDERSTANDING                  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  INDEXATION                         RETRIEVAL                    │
+│  ═══════════                        ═════════                    │
+│                                                                  │
+│  GitHub Repo                        User Question                │
+│      │                                   │                       │
+│      ▼                                   ▼                       │
+│  Tree-sitter AST ──────────────► Hybrid Search (BM25+Vector)    │
+│      │                                   │                       │
+│      ▼                                   ▼                       │
+│  Semantic Chunks ──────────────► Re-ranking (Voyage)            │
+│      │                                   │                       │
+│      ▼                                   ▼                       │
+│  Contextual Enrichment ────────► 1-hop Expansion                │
+│      │                                   │                       │
+│      ▼                                   ▼                       │
+│  Voyage Embeddings ────────────► Context Builder                │
+│      │                                   │                       │
+│      ▼                                   ▼                       │
+│  pgvector Storage                 Claude (Haiku/Sonnet)         │
+│                                          │                       │
+│                                          ▼                       │
+│                                    Precise Answer                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Composants Clés
+
+#### 1. Tree-sitter AST Chunking
+
+**Quoi :** Remplace le chunking par regex par un parsing AST réel.
+
+**Pourquoi :** Les chunks respectent les unités sémantiques du code (fonctions, classes, interfaces) au lieu de couper arbitrairement.
+
+**Impact attendu :** +30-40% de qualité de retrieval
+
+**Langages supportés :** TypeScript, JavaScript, Python, Go, Rust, Java, C++, Ruby, PHP, et 30+ autres via Tree-sitter.
+
+#### 2. Hybrid Search (BM25 + Vector)
+
+**Quoi :** Combine recherche lexicale (mots-clés exacts) et sémantique (embeddings vectoriels).
+
+**Pourquoi :** La recherche vectorielle seule rate les correspondances exactes (noms de fonctions, variables). BM25 les capture.
+
+**Implémentation :**
+- PostgreSQL `tsvector` pour BM25
+- pgvector pour la recherche sémantique
+- Fusion RRF (Reciprocal Rank Fusion) avec poids configurables
+
+**Impact attendu :** +25-35% de qualité de retrieval
+
+#### 3. Re-ranking (Voyage AI)
+
+**Quoi :** Affine les résultats initiaux avec un modèle cross-encoder spécialisé code.
+
+**Pourquoi :** Le top-50 de la recherche initiale contient du bruit. Le re-ranking sélectionne les 10 chunks les plus pertinents.
+
+**Modèle :** Voyage `rerank-2.5` ($0.05/1M tokens)
+
+**Impact attendu :** +15-25% de qualité de retrieval
+
+#### 4. Contextual Retrieval
+
+**Quoi :** Chaque chunk est enrichi avec 50-100 tokens de contexte expliquant son rôle.
+
+**Pourquoi :** Un chunk isolé perd son contexte (dans quel fichier ? quelle classe ? quel module ?).
+
+**Génération :** Claude Haiku à l'indexation (~$0.002/chunk)
+
+**Impact attendu :** +20-30% de qualité de retrieval
+
+#### 5. 1-hop Expansion
+
+**Quoi :** Quand on trouve un chunk pertinent, on récupère aussi les fichiers qu'il importe/référence.
+
+**Pourquoi :** Les questions complexes nécessitent du contexte de plusieurs fichiers liés.
+
+**Impact attendu :** +15-20% pour les questions cross-file
+
+#### 6. Model Routing (Haiku/Sonnet)
+
+**Quoi :** Routing automatique vers le modèle LLM approprié selon la complexité de la question.
+
+**Pourquoi :** Optimisation coût/qualité. Haiku suffit pour les lookups simples, Sonnet pour les analyses complexes.
+
+| Type de question | Modèle | Coût/question |
+|------------------|--------|---------------|
+| Simple lookup | Claude Haiku | ~$0.007 |
+| Analyse complexe | Claude Sonnet | ~$0.022 |
+
+**Impact coût :** -40% sur les coûts LLM
+
+### Métriques de Succès
+
+| Métrique | Baseline (actuel) | Cible |
+|----------|-------------------|-------|
+| Recall@10 | 60% | 90% |
+| MRR (Mean Reciprocal Rank) | 0.45 | 0.85 |
+| Questions hors-catégorie répondues | ~40% | 95% |
+| Latence p50 | 800ms | 1100ms |
+| Coût moyen/question | $0.022 | $0.015 |
+
+### Analyse des Coûts
+
+#### Coûts d'Indexation (one-time par repo)
+
+| Composant | 5K LOC | 25K LOC | 100K LOC |
+|-----------|--------|---------|----------|
+| Embeddings (Voyage) | $0.009 | $0.045 | $0.18 |
+| Contextual chunks (Haiku) | $0.20 | $1.00 | $4.00 |
+| **Total** | **$0.21** | **$1.05** | **$4.18** |
+
+#### Coûts par Question
+
+| Composant | Coût |
+|-----------|------|
+| Query embedding | ~$0.00002 |
+| Re-ranking | ~$0.0002 |
+| LLM (Haiku) | ~$0.007 |
+| LLM (Sonnet) | ~$0.022 |
+| **Total (Haiku)** | **~$0.007** |
+| **Total (Sonnet)** | **~$0.022** |
+
+#### Coût Mensuel par Utilisateur
+
+| Scénario | Repo | Questions/mois | Coût |
+|----------|------|----------------|------|
+| Small | 5K LOC | 50 | ~$26/mois |
+| Medium | 25K LOC | 200 | ~$28/mois |
+| Large | 100K LOC | 500 | ~$32/mois |
+
+**Note :** Le coût fixe Supabase ($25/mois) domine. Les coûts variables sont négligeables.
+
+### Plan d'Implémentation
+
+| Phase | Contenu | Durée | Impact |
+|-------|---------|-------|--------|
+| **Phase 1** | Tree-sitter AST + Hybrid Search | 2-3 semaines | +50-60% |
+| **Phase 2** | Re-ranking + Contextual Retrieval + Model Routing | 2 semaines | +35-45% |
+| **Phase 3** | 1-hop Expansion + File Summaries | 2-3 semaines | +20-30% |
+
+**Impact total estimé : +100-150% de qualité de réponse**
+
+### Documentation Associée
+
+- **Recherche technique :** `_bmad-output/planning-artifacts/research-universal-code-rag.md`
+- **Plan d'implémentation détaillé :** `_bmad-output/planning-artifacts/implementation-plan-universal-code-rag.md`
+
+---
+
 ## Functional Requirements
 
 ### Authentification & Compte
@@ -336,6 +512,19 @@ Aucun concurrent direct ne cible "non-tech parlant à leur codebase" :
 - **FR30:** Le système cite les fichiers sources pertinents dans ses réponses
 - **FR31:** Le système fournit un feedback visuel pendant les analyses longues
 
+### Universal Code Understanding
+
+- **FR32:** L'utilisateur peut poser n'importe quelle question sur sa codebase sans restriction de catégorie
+- **FR33:** Le système comprend les questions en langage naturel, qu'elles soient techniques ou fonctionnelles
+- **FR34:** Le système identifie automatiquement les fichiers pertinents pour répondre à une question
+- **FR35:** Le système suit les dépendances entre fichiers pour fournir un contexte complet
+- **FR36:** Le système peut répondre à des questions portant sur plusieurs fichiers liés
+- **FR37:** Le système adapte automatiquement le modèle LLM (Haiku/Sonnet) selon la complexité de la question
+- **FR38:** Le système peut rechercher par mots-clés exacts (noms de fonctions, variables) ET par sens sémantique
+- **FR39:** L'utilisateur peut demander des explications sur n'importe quel concept présent dans le code
+- **FR40:** Le système peut tracer les appels de fonctions ("où est appelée cette fonction ?")
+- **FR41:** Le système peut identifier les dépendances ("qu'est-ce qui dépend de ce fichier ?")
+
 ## Non-Functional Requirements
 
 ### Performance
@@ -369,4 +558,16 @@ Aucun concurrent direct ne cible "non-tech parlant à leur codebase" :
 
 - **NFR14:** Le système est disponible 99% du temps (hors maintenance planifiée)
 - **NFR15:** En cas d'erreur, l'utilisateur reçoit un message explicatif (pas d'écran blanc)
+
+### Universal Code Understanding
+
+- **NFR16:** L'indexation initiale d'un repo de 25K lignes prend moins de 5 minutes
+- **NFR17:** La recherche hybride (BM25 + Vector) retourne des résultats en moins de 500ms
+- **NFR18:** Le re-ranking ajoute moins de 300ms de latence
+- **NFR19:** Le système supporte les repos jusqu'à 100K lignes de code
+- **NFR20:** Le Recall@10 (proportion de résultats pertinents dans le top 10) est supérieur à 85%
+- **NFR21:** Le coût moyen par question est inférieur à $0.02
+- **NFR22:** Le système supporte au minimum 10 langages de programmation (TypeScript, JavaScript, Python, Go, Rust, Java, C++, Ruby, PHP, C#)
+- **NFR23:** Les embeddings sont générés avec Voyage AI voyage-code-3 (1024 dimensions)
+- **NFR24:** La base vectorielle utilise pgvector avec index IVFFlat pour des recherches O(log n)
 
