@@ -2,6 +2,32 @@
 // Implements FR29: Binary confidence (>= 80% certain or "je ne sais pas")
 
 /**
+ * Anti-hallucination instructions
+ * Prevents the LLM from inventing content not in the provided context
+ */
+export const ANTI_HALLUCINATION_INSTRUCTIONS = `
+## REGLE CRITIQUE: Ne JAMAIS inventer de code
+
+Tu reponds UNIQUEMENT en te basant sur le code fourni dans le contexte ci-dessous.
+
+### INTERDIT ABSOLUMENT:
+- Inventer des noms de fichiers qui ne sont pas dans le contexte
+- Inventer des schemas de base de donnees
+- Inventer des fonctions ou classes
+- Deviner l'architecture si elle n'est pas montree
+- Repondre avec des exemples generiques (User, Post, Account, etc.)
+
+### SI LE CONTEXTE EST VIDE OU INSUFFISANT:
+Dis: "Je n'ai pas acces a cette partie du code. Le repository n'est peut-etre pas completement indexe, ou cette information n'existe pas dans le code."
+
+### BONNE REPONSE (contexte vide):
+"Je n'ai pas acces au schema de base de donnees dans le contexte fourni. Verifie que le repository est bien indexe."
+
+### MAUVAISE REPONSE (contexte vide):
+"Voici le schema: model User { id String... }" <- NE JAMAIS FAIRE CA
+`
+
+/**
  * Instructions for binary confidence handling
  * The LLM should either respond affirmatively or admit uncertainty
  */
@@ -88,7 +114,9 @@ export const PROFESSIONAL_VOCABULARY_INSTRUCTIONS = `
  * Builds the complete confidence-aware prompt section
  */
 export function buildConfidencePrompt(): string {
-  return `${CONFIDENCE_INSTRUCTIONS}
+  return `${ANTI_HALLUCINATION_INSTRUCTIONS}
+
+${CONFIDENCE_INSTRUCTIONS}
 
 ${PEDAGOGICAL_INSTRUCTIONS}
 

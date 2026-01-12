@@ -20,7 +20,7 @@ export function LoginButton({ redirectTo }: LoginButtonProps) {
       provider: 'github',
       options: {
         redirectTo: `${window.location.origin}/auth/callback${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`,
-        scopes: 'repo user:email',
+        scopes: 'repo user:email read:org',
       },
     })
 

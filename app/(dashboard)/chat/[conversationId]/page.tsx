@@ -342,7 +342,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
 
       {/* Error display */}
       {error && (
-        <div className="mx-auto mb-2 max-w-[800px] rounded-lg bg-destructive/10 px-4 py-2 text-center text-sm text-destructive">
+        <div className="mx-auto mb-2 max-w-[1000px] rounded-lg bg-destructive/10 px-4 py-2 text-center text-sm text-destructive">
           {error.message || 'Une erreur est survenue'}
         </div>
       )}

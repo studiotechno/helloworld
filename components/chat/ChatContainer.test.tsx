@@ -22,7 +22,7 @@ describe('ChatContainer', () => {
     )
 
     const container = screen.getByText('Content').parentElement
-    expect(container).toHaveClass('max-w-[800px]')
+    expect(container).toHaveClass('max-w-[1000px]')
   })
 
   it('should apply custom className', () => {

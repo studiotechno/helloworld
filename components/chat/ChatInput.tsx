@@ -54,7 +54,7 @@ export function ChatInput({
 
   return (
     <div className="border-t border-border/50 bg-background/80 p-4 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-[800px] items-end gap-3">
+      <div className="mx-auto flex max-w-[1000px] items-end gap-3">
         <Textarea
           ref={textareaRef}
           value={value}
@@ -88,7 +88,7 @@ export function ChatInput({
           <Send className="size-5" />
         </Button>
       </div>
-      <p className="mx-auto mt-2 max-w-[800px] text-center text-xs text-muted-foreground/60">
+      <p className="mx-auto mt-2 max-w-[1000px] text-center text-xs text-muted-foreground/60">
         Appuyez sur{' '}
         <kbd className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
           Cmd

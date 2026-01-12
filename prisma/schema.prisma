@@ -68,9 +68,14 @@ model code_chunks {
   // Metadata pour ameliorer le retrieval
   symbol_name  String?  // Nom de la fonction/classe
   dependencies String[] @default([]) // Imports detectes
+  context      String?  @db.Text // Contextual description from LLM (for Contextual Retrieval)
 
   // Note: embedding column is added via raw SQL migration (pgvector)
   // ALTER TABLE code_chunks ADD COLUMN embedding vector(1024);
+
+  // Note: search_vector column is added via raw SQL migration (tsvector for full-text search)
+  // ALTER TABLE code_chunks ADD COLUMN search_vector tsvector;
+  // A trigger automatically updates this column on insert/update
 
   // Tracking
   file_hash  String   // SHA256 du fichier pour detecter changements

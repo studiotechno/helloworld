@@ -86,7 +86,8 @@ export async function POST(req: Request) {
 }
 
 // GET - List user's conversations
-export async function GET() {
+// Optional query param: ?repositoryId=xxx to filter by repository
+export async function GET(req: Request) {
   try {
     const user = await getCurrentUser()
     if (!user) {
@@ -96,9 +97,14 @@ export async function GET() {
       )
     }
 
+    // Parse optional repositoryId filter
+    const { searchParams } = new URL(req.url)
+    const repositoryId = searchParams.get('repositoryId')
+
     const conversations = await prisma.conversations.findMany({
       where: {
         user_id: user.id,
+        ...(repositoryId && { repository_id: repositoryId }),
       },
       orderBy: {
         updated_at: 'desc',

@@ -46,3 +46,25 @@ export {
   type ContextOptions,
   type ContextResult,
 } from './context-builder'
+
+// Hybrid Search (RRF-based fusion of vector + BM25)
+export {
+  hybridSearchV2,
+  searchSymbols,
+  searchFiles,
+  analyzeSearchResults,
+  toRetrievedChunks,
+  type HybridSearchOptions,
+  type HybridSearchResult,
+  type SymbolSearchResult,
+  type FileSearchResult,
+} from './hybrid-search'
+
+// Reranker (Voyage AI rerank-2.5)
+export {
+  rerankChunks,
+  calculateRerankMetrics,
+  getRerankSummary,
+  type RerankOptions,
+  type RerankedChunk,
+} from './reranker'

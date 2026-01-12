@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
-import { Search, FolderGit2 } from 'lucide-react'
+import { Search, FolderGit2, RefreshCw } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { RepoCard } from './RepoCard'
 import { RepoError } from './RepoError'
@@ -64,7 +65,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
 
 export function RepoList({ onSelectRepo, className }: RepoListProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const { data: repos, isLoading, error, refetch } = useRepos()
+  const { data: repos, isLoading, error, refetch, forceRefresh, isRefreshing } = useRepos()
   const { data: activeRepo } = useActiveRepo()
   const { data: indexedRepos } = useIndexedRepos()
 
@@ -106,17 +107,28 @@ export function RepoList({ onSelectRepo, className }: RepoListProps) {
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Search input */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          type="search"
-          placeholder="Rechercher un repository..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-          aria-label="Rechercher un repository"
-        />
+      {/* Search input with refresh button */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Rechercher un repository..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+            aria-label="Rechercher un repository"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={forceRefresh}
+          disabled={isRefreshing || isLoading}
+          title="Rafraîchir la liste (inclut les repos d'organisations)"
+        >
+          <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+        </Button>
       </div>
 
       {/* Loading state */}
@@ -158,12 +170,12 @@ export function RepoList({ onSelectRepo, className }: RepoListProps) {
       )}
 
       {/* Results count */}
-      {!isLoading && !error && repos && repos.length > 0 && (
+      {/* {!isLoading && !error && repos && repos.length > 0 && (
         <p className="text-xs text-muted-foreground text-center pt-2">
           {filteredRepos.length} repositories disponibles
           {searchQuery.trim() && ` (recherche)`}
         </p>
-      )}
+      )} */}
     </div>
   )
 }

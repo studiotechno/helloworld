@@ -32,46 +32,6 @@ describe('AnalysisLoader', () => {
     })
   })
 
-  describe('progress display', () => {
-    it('should not show progress in loading phase', () => {
-      render(
-        <AnalysisLoader
-          phase="loading"
-          filesAnalyzed={100}
-          foldersAnalyzed={5}
-        />
-      )
-      expect(screen.queryByText(/fichiers analyses/)).not.toBeInTheDocument()
-    })
-
-    it('should show progress in scanning phase', () => {
-      render(
-        <AnalysisLoader
-          phase="scanning"
-          filesAnalyzed={100}
-          foldersAnalyzed={5}
-        />
-      )
-      expect(screen.getByText(/fichiers analyses dans/)).toBeInTheDocument()
-      expect(screen.getByText(/dossiers/)).toBeInTheDocument()
-    })
-
-    it('should show progress in processing phase', () => {
-      render(
-        <AnalysisLoader
-          phase="processing"
-          filesAnalyzed={500}
-          foldersAnalyzed={10}
-        />
-      )
-      expect(screen.getByText(/fichiers analyses dans/)).toBeInTheDocument()
-    })
-
-    it('should not show progress when filesAnalyzed is 0', () => {
-      render(<AnalysisLoader phase="scanning" filesAnalyzed={0} />)
-      expect(screen.queryByText(/fichiers analyses/)).not.toBeInTheDocument()
-    })
-  })
 
   describe('cancel button', () => {
     it('should not show cancel button in non-timeout phases', () => {

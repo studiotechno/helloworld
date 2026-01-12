@@ -1,6 +1,7 @@
 // React Query hook for fetching user repositories
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useState } from 'react'
 import type { GitHubRepo } from '@/lib/github/types'
 
 interface ApiError {
@@ -10,8 +11,9 @@ interface ApiError {
   }
 }
 
-async function fetchRepos(): Promise<GitHubRepo[]> {
-  const res = await fetch('/api/repos')
+async function fetchRepos(forceRefresh = false): Promise<GitHubRepo[]> {
+  const url = forceRefresh ? '/api/repos?refresh=true' : '/api/repos'
+  const res = await fetch(url)
 
   if (!res.ok) {
     const errorData: ApiError = await res.json()
@@ -22,9 +24,12 @@ async function fetchRepos(): Promise<GitHubRepo[]> {
 }
 
 export function useRepos() {
-  return useQuery({
+  const queryClient = useQueryClient()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const query = useQuery({
     queryKey: ['repos'],
-    queryFn: fetchRepos,
+    queryFn: () => fetchRepos(false),
     staleTime: 5 * 60 * 1000, // 5 minutes (match server cache TTL)
     retry: (failureCount, error) => {
       // Don't retry on auth errors
@@ -34,4 +39,21 @@ export function useRepos() {
       return failureCount < 3
     },
   })
+
+  // Force refresh from GitHub API (bypasses cache)
+  const forceRefresh = useCallback(async () => {
+    setIsRefreshing(true)
+    try {
+      const freshRepos = await fetchRepos(true)
+      queryClient.setQueryData(['repos'], freshRepos)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [queryClient])
+
+  return {
+    ...query,
+    forceRefresh,
+    isRefreshing,
+  }
 }

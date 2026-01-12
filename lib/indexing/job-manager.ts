@@ -26,6 +26,7 @@ export type JobPhase =
   | 'Initializing'
   | 'Fetching files'
   | 'Parsing code'
+  | 'Generating context'
   | 'Generating embeddings'
   | 'Finalizing'
 

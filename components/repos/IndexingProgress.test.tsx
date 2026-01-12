@@ -298,7 +298,7 @@ describe('IndexingProgress', () => {
       render(<IndexingProgress repositoryId="repo-123" />)
 
       await vi.waitFor(() => {
-        expect(screen.getByText('Indexation terminee')).toBeInTheDocument()
+        expect(screen.getByText('Indéxation terminee')).toBeInTheDocument()
       })
 
       // Advance time - should not poll
@@ -320,7 +320,7 @@ describe('IndexingProgress', () => {
       render(<IndexingProgress repositoryId="repo-123" />)
 
       await waitFor(() => {
-        expect(screen.getByText('Indexation echouee')).toBeInTheDocument()
+        expect(screen.getByText('Indéxation échouée')).toBeInTheDocument()
         expect(screen.getByText('GitHub API rate limit exceeded')).toBeInTheDocument()
       })
     })
@@ -334,7 +334,7 @@ describe('IndexingProgress', () => {
       render(<IndexingProgress repositoryId="repo-123" />)
 
       await waitFor(() => {
-        expect(screen.getByText('Reessayer')).toBeInTheDocument()
+        expect(screen.getByText('Réessayer')).toBeInTheDocument()
       })
     })
 
@@ -372,12 +372,12 @@ describe('IndexingProgress', () => {
 describe('IndexingBadge', () => {
   it('should show not started badge', () => {
     render(<IndexingBadge status="not_started" />)
-    expect(screen.getByText('Non indexe')).toBeInTheDocument()
+    expect(screen.getByText('Non indexé')).toBeInTheDocument()
   })
 
   it('should show indexed badge', () => {
     render(<IndexingBadge status="completed" />)
-    expect(screen.getByText('Indexe')).toBeInTheDocument()
+    expect(screen.getByText('Indéxé')).toBeInTheDocument()
   })
 
   it('should show in-progress badge', () => {
@@ -387,11 +387,11 @@ describe('IndexingBadge', () => {
 
   it('should show failed badge', () => {
     render(<IndexingBadge status="failed" />)
-    expect(screen.getByText('Echec')).toBeInTheDocument()
+    expect(screen.getByText('Échec')).toBeInTheDocument()
   })
 
   it('should show cancelled badge', () => {
     render(<IndexingBadge status="cancelled" />)
-    expect(screen.getByText('Annule')).toBeInTheDocument()
+    expect(screen.getByText('Annulé')).toBeInTheDocument()
   })
 })

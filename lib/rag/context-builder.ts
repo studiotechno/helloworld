@@ -75,6 +75,12 @@ function formatChunk(
     lines.push(`### ${location}`)
   }
 
+  // Add context description if available (from Contextual Retrieval)
+  if (chunk.context) {
+    lines.push('')
+    lines.push(`> ${chunk.context}`)
+  }
+
   // Add score if requested
   if (options.includeScores) {
     lines.push(`_Relevance: ${(chunk.score * 100).toFixed(0)}%_`)

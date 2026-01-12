@@ -34,18 +34,25 @@ export interface ConversationWithMessages {
 }
 
 /**
- * Hook to fetch all conversations for the current user
+ * Hook to fetch conversations for the current user
+ * @param repositoryId - Repository ID to filter conversations (undefined = not loaded yet, null = no repo)
  */
-export function useConversations() {
+export function useConversations(repositoryId?: string | null) {
   return useQuery<Conversation[]>({
-    queryKey: ['conversations'],
+    queryKey: ['conversations', repositoryId ?? 'none'],
     queryFn: async () => {
-      const response = await fetch('/api/conversations')
+      // If no repository selected, return empty array
+      if (!repositoryId) {
+        return []
+      }
+      const response = await fetch(`/api/conversations?repositoryId=${repositoryId}`)
       if (!response.ok) {
         throw new Error('Failed to fetch conversations')
       }
       return response.json()
     },
+    // Only fetch when repositoryId is defined (even if null)
+    enabled: repositoryId !== undefined,
   })
 }
 

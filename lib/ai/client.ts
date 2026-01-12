@@ -7,8 +7,12 @@ export const model = anthropic('claude-sonnet-4-20250514')
 
 // Alternative models for different use cases
 export const models = {
-  // Main model for chat responses
+  // Main model for chat responses (most capable)
   chat: anthropic('claude-sonnet-4-20250514'),
   // Fast model for simple tasks (title generation, etc.)
   fast: anthropic('claude-sonnet-4-20250514'),
+  // Haiku model for high-volume, low-latency tasks (contextual retrieval, routing)
+  haiku: anthropic('claude-3-5-haiku-20241022'),
 } as const
+
+export type ModelType = keyof typeof models

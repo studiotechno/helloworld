@@ -4,7 +4,7 @@
  * Exports for code chunking and file filtering functionality.
  */
 
-// Chunking
+// Chunking (regex-based - fallback)
 export {
   chunkFile,
   detectLanguage,
@@ -12,6 +12,20 @@ export {
   estimateTokens,
   type CodeChunk,
 } from './chunker'
+
+// AST-based Chunking (Tree-sitter)
+export {
+  chunkFileAST,
+  extractSymbols,
+  getChunkContext,
+} from './ast-chunker'
+
+// Tree-sitter Initialization
+export {
+  initTreeSitter,
+  isLanguageSupported,
+  SUPPORTED_LANGUAGES,
+} from './tree-sitter-init'
 
 // File Filtering
 export {

@@ -4,7 +4,6 @@ import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { BouncingDots } from './BouncingDots'
-import { AnimatedNumber } from './AnimatedNumber'
 
 export type AnalysisPhase = 'loading' | 'scanning' | 'processing' | 'timeout'
 
@@ -79,14 +78,6 @@ export function AnalysisLoader({
       <div className="flex-1 space-y-2">
         {/* Main Message */}
         <p className="text-sm font-medium text-foreground">{displayMessage}</p>
-
-        {/* Progress Details */}
-        {showProgress && filesAnalyzed > 0 && (
-          <p className="text-xs text-muted-foreground">
-            <AnimatedNumber value={filesAnalyzed} /> fichiers analyses dans{' '}
-            <AnimatedNumber value={foldersAnalyzed} /> dossiers
-          </p>
-        )}
 
         {/* Bouncing Dots */}
         <BouncingDots />

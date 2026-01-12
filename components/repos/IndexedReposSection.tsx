@@ -60,7 +60,7 @@ export function IndexedReposSection() {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Impossible de selectionner le repository'
+          : 'Impossible de selectionner le repo'
       )
     }
   }
@@ -75,7 +75,7 @@ export function IndexedReposSection() {
       <div className="flex items-center gap-2 mb-3">
         <Database className="h-4 w-4 text-green-500" />
         <h2 className="text-sm font-medium text-muted-foreground">
-          Repositories indexes
+          Repo indéxés
         </h2>
       </div>
 

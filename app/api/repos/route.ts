@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { fetchUserRepos } from '@/lib/github/client'
-import { getCachedRepos, setCachedRepos } from '@/lib/github/cache'
+import { getCachedRepos, setCachedRepos, invalidateCachedRepos } from '@/lib/github/cache'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    // Check for refresh param to bypass cache
+    const { searchParams } = new URL(req.url)
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
     // Get authenticated Prisma user
     const user = await getCurrentUser()
     if (!user) {
@@ -15,17 +19,18 @@ export async function GET() {
       )
     }
 
-    // Get GitHub token - prefer stored token, fallback to session
-    let githubToken = user.github_token
+    // Get GitHub token - prefer fresh session token, fallback to stored token
+    const supabase = await createClient()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    if (!githubToken) {
-      // Try to get from session (available right after OAuth)
-      const supabase = await createClient()
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      githubToken = session?.provider_token ?? null
-    }
+    console.log('[API] Session provider_token exists:', !!session?.provider_token)
+    console.log('[API] Stored github_token exists:', !!user.github_token)
+
+    // Use session token if available (it has the latest scopes)
+    let githubToken = session?.provider_token ?? user.github_token
+    console.log('[API] Using token from:', session?.provider_token ? 'session' : 'database')
 
     if (!githubToken) {
       return NextResponse.json(
@@ -34,17 +39,40 @@ export async function GET() {
       )
     }
 
+    // Update stored token if session has a fresh one
+    if (session?.provider_token && session.provider_token !== user.github_token) {
+      console.log('[API] Updating stored GitHub token with fresh session token')
+      const { prisma } = await import('@/lib/db/prisma')
+      await prisma.users.update({
+        where: { id: user.id },
+        data: { github_token: session.provider_token },
+      })
+    }
+
     // Use Prisma user ID for caching
     const userId = user.id
 
-    // Check cache first
-    const cached = await getCachedRepos(userId)
-    if (cached) {
-      return NextResponse.json(cached)
+    // Invalidate cache if refresh requested
+    if (forceRefresh) {
+      await invalidateCachedRepos(userId)
+    }
+
+    // Check cache first (unless refresh requested)
+    if (!forceRefresh) {
+      const cached = await getCachedRepos(userId)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
     }
 
     // Fetch from GitHub API
+    console.log('[API] Fetching repos from GitHub API...')
     const repos = await fetchUserRepos(githubToken)
+    console.log(`[API] Fetched ${repos.length} repos from GitHub`)
+
+    // Log org repos for debugging
+    const orgRepos = repos.filter(r => r.full_name.includes('/') && !r.full_name.startsWith(user.name || ''))
+    console.log(`[API] Found ${orgRepos.length} potential org repos`)
 
     // Cache the result
     await setCachedRepos(userId, repos)

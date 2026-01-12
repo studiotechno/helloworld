@@ -26,6 +26,8 @@ export interface RetrievedChunk {
   chunkType: string
   symbolName: string | null
   score: number
+  /** Contextual description from LLM (if available) */
+  context?: string | null
 }
 
 export interface SearchOptions {
@@ -49,6 +51,7 @@ interface VectorSearchRow {
   language: string
   chunk_type: string
   symbol_name: string | null
+  context: string | null
   similarity: number
 }
 
@@ -64,6 +67,7 @@ interface HybridSearchRow {
   language: string
   chunk_type: string
   symbol_name: string | null
+  context: string | null
   combined_score: number
 }
 
@@ -83,6 +87,7 @@ function toRetrievedChunk(
     language: row.language,
     chunkType: row.chunk_type,
     symbolName: row.symbol_name,
+    context: row.context,
     score: scoreField === 'similarity'
       ? (row as VectorSearchRow).similarity
       : (row as HybridSearchRow).combined_score,
@@ -325,6 +330,7 @@ export async function searchByFile(
     language: row.language,
     chunkType: row.chunk_type,
     symbolName: row.symbol_name,
+    context: row.context,
     score: 1.0, // Direct file match
   }))
 }
@@ -364,6 +370,7 @@ export async function searchBySymbol(
     language: row.language,
     chunkType: row.chunk_type,
     symbolName: row.symbol_name,
+    context: row.context,
     score: 1.0, // Direct symbol match
   }))
 }
@@ -403,6 +410,7 @@ export async function searchByType(
     language: row.language,
     chunkType: row.chunk_type,
     symbolName: row.symbol_name,
+    context: row.context,
     score: 1.0,
   }))
 }
