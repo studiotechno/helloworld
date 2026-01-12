@@ -10,6 +10,7 @@ import {
   ChatContainer,
   ChatInput,
   ChatMessage,
+  CitationProvider,
   EmptyState,
   TypingIndicator,
   AnalysisLoader,
@@ -24,21 +25,24 @@ export default function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [userScrolled, setUserScrolled] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [hasRedirected, setHasRedirected] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const previousStatusRef = useRef<string>('')
 
   // Create chat transport with our API endpoint
+  // Include conversationId once we have it (after first message)
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { repoId: activeRepo?.id },
+        body: { repoId: activeRepo?.id, conversationId },
       }),
-    [activeRepo?.id]
+    [activeRepo?.id, conversationId]
   )
 
   // useChat hook from Vercel AI SDK v6
+  // Use conversationId as id so hook reinitializes when we get the conversation ID
   const { messages, sendMessage, status, error } = useChat({
+    id: conversationId || 'new-chat',
     transport,
     onError: (err) => {
       console.error('[Chat] Error:', err)
@@ -58,7 +62,7 @@ export default function ChatPage() {
     }
   }, [activeRepo, repoLoading, router])
 
-  // Handle status changes: invalidate cache on submit, redirect on completion
+  // Handle status changes: invalidate cache on submit, capture conversationId on completion
   useEffect(() => {
     const prevStatus = previousStatusRef.current
 
@@ -72,28 +76,30 @@ export default function ChatPage() {
       return () => clearTimeout(timer)
     }
 
-    // After streaming completes, redirect to the conversation page
-    if (prevStatus === 'streaming' && status === 'ready' && messages.length > 0 && !hasRedirected) {
-      const redirectToConversation = async () => {
+    // After streaming completes, capture the conversation ID and update URL
+    if (prevStatus === 'streaming' && status === 'ready' && messages.length > 0 && !conversationId) {
+      const captureConversationId = async () => {
         try {
           const response = await fetch('/api/conversations')
           if (response.ok) {
             const conversations = await response.json()
             if (conversations.length > 0) {
               const latestConversation = conversations[0]
-              setHasRedirected(true)
-              router.push(`/chat/${latestConversation.id}`)
+              // Store the conversation ID for subsequent messages
+              setConversationId(latestConversation.id)
+              // Update URL without full page reload (keeps chat state)
+              router.replace(`/chat/${latestConversation.id}`, { scroll: false })
             }
           }
         } catch (err) {
           console.error('[Chat] Failed to fetch conversation:', err)
         }
       }
-      redirectToConversation()
+      captureConversationId()
     }
 
     previousStatusRef.current = status
-  }, [status, messages.length, hasRedirected, router, queryClient])
+  }, [status, messages.length, conversationId, router, queryClient])
 
   // Auto-scroll to bottom when new messages arrive (unless user scrolled up)
   useEffect(() => {
@@ -187,37 +193,42 @@ export default function ChatPage() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
       >
-        {hasMessages ? (
-          <div className="space-y-2 py-4">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                role={message.role as 'user' | 'assistant'}
-                content={getMessageContent(message)}
-                isStreaming={
-                  status === 'streaming' &&
-                  message.role === 'assistant' &&
-                  message.id === messages[messages.length - 1]?.id
-                }
-              />
-            ))}
-            {status === 'submitted' && messages[messages.length - 1]?.role === 'user' && (
-              analysisLoader.showLoader ? (
-                <AnalysisLoader
-                  phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
-                  message={analysisLoader.message}
-                  filesAnalyzed={analysisLoader.filesAnalyzed}
-                  foldersAnalyzed={analysisLoader.foldersAnalyzed}
-                  onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+        <CitationProvider
+          repoFullName={activeRepo?.full_name}
+          defaultBranch={activeRepo?.default_branch}
+        >
+          {hasMessages ? (
+            <div className="space-y-2 py-4">
+              {messages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  role={message.role as 'user' | 'assistant'}
+                  content={getMessageContent(message)}
+                  isStreaming={
+                    status === 'streaming' &&
+                    message.role === 'assistant' &&
+                    message.id === messages[messages.length - 1]?.id
+                  }
                 />
-              ) : (
-                <TypingIndicator />
-              )
-            )}
-          </div>
-        ) : (
-          <EmptyState onSuggestionClick={handleSuggestionClick} />
-        )}
+              ))}
+              {status === 'submitted' && messages[messages.length - 1]?.role === 'user' && (
+                analysisLoader.showLoader ? (
+                  <AnalysisLoader
+                    phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
+                    message={analysisLoader.message}
+                    filesAnalyzed={analysisLoader.filesAnalyzed}
+                    foldersAnalyzed={analysisLoader.foldersAnalyzed}
+                    onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+                  />
+                ) : (
+                  <TypingIndicator />
+                )
+              )}
+            </div>
+          ) : (
+            <EmptyState onSuggestionClick={handleSuggestionClick} />
+          )}
+        </CitationProvider>
       </div>
 
       {/* Scroll to bottom button */}

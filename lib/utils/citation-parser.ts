@@ -1,18 +1,26 @@
 // Citation parser for extracting file references from LLM responses
-// Handles format: [path/to/file.ext:line] or [path/to/file.ext]
+// Handles formats:
+// - [path/to/file.ext]
+// - [path/to/file.ext:line]
+// - [path/to/file.ext:startLine-endLine]
 
 export interface Citation {
   path: string
   line?: number
+  endLine?: number
   original: string // Original matched text for replacement
   startIndex: number
   endIndex: number
 }
 
-// Regex to match [path/to/file.ext:line] or [path/to/file.ext]
-// Matches file paths with common extensions, optionally followed by :lineNumber
-// Excludes common markdown patterns like [text](url) by requiring file extension
-const CITATION_REGEX = /\[([^\]\s]+\.[a-zA-Z0-9]+)(?::(\d+))?\]/g
+// Regex to match file path citations
+// [path/to/file.ext] or [path/to/file.ext:line] or [path/to/file.ext:start-end]
+// Requires:
+// - Path containing at least one slash (/) to avoid matching simple words
+// - File extension (.ts, .tsx, .js, etc.)
+// - Optional line number or line range
+// Note: Includes () for Next.js route groups like (auth), (dashboard)
+const CITATION_REGEX = /\[([a-zA-Z0-9_\-./()]+\/[a-zA-Z0-9_\-./()]+\.[a-zA-Z0-9]+)(?::(\d+)(?:-(\d+))?)?\]/g
 
 /**
  * Parse citations from content string
@@ -29,6 +37,7 @@ export function parseCitations(content: string): Citation[] {
   while ((match = CITATION_REGEX.exec(content)) !== null) {
     const path = match[1]
     const lineStr = match[2]
+    const endLineStr = match[3]
 
     // Skip if it looks like a markdown link [text](url)
     // Check if there's a ( immediately after the ]
@@ -40,6 +49,7 @@ export function parseCitations(content: string): Citation[] {
     citations.push({
       path,
       line: lineStr ? parseInt(lineStr, 10) : undefined,
+      endLine: endLineStr ? parseInt(endLineStr, 10) : undefined,
       original: match[0],
       startIndex: match.index,
       endIndex: match.index + match[0].length,

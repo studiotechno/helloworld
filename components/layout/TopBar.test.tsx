@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TopBar } from './TopBar'
+import type { ReactNode } from 'react'
+
+// Mock fetch for indexing status (used by RepoSelector)
+const mockFetch = vi.fn()
+vi.stubGlobal('fetch', mockFetch)
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -18,6 +24,24 @@ vi.mock('@/lib/supabase/client', () => ({
     },
   }),
 }))
+
+// Create wrapper with QueryClient
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    )
+  }
+}
 
 describe('TopBar', () => {
   const mockUser = {
@@ -38,33 +62,33 @@ describe('TopBar', () => {
   }
 
   it('renders user information', () => {
-    render(<TopBar user={mockUser} />)
+    render(<TopBar user={mockUser} />, { wrapper: createWrapper() })
 
     expect(screen.getByText('Test User')).toBeInTheDocument()
   })
 
   it('renders RepoSelector with no repo connected state', () => {
-    render(<TopBar user={mockUser} repo={null} />)
+    render(<TopBar user={mockUser} repo={null} />, { wrapper: createWrapper() })
 
     expect(screen.getByText('Selectionnez un repository')).toBeInTheDocument()
   })
 
   it('renders RepoSelector with connected repo', () => {
-    render(<TopBar user={mockUser} repo={mockRepo} />)
+    render(<TopBar user={mockUser} repo={mockRepo} />, { wrapper: createWrapper() })
 
     expect(screen.getByText('owner/my-repo')).toBeInTheDocument()
     expect(screen.getByText('main')).toBeInTheDocument()
   })
 
   it('renders TechTags when technologies are provided', () => {
-    render(<TopBar user={mockUser} repo={mockRepo} technologies={['TypeScript', 'Python']} />)
+    render(<TopBar user={mockUser} repo={mockRepo} technologies={['TypeScript', 'Python']} />, { wrapper: createWrapper() })
 
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
     expect(screen.getByText('Python')).toBeInTheDocument()
   })
 
   it('does not render TechTags when technologies are empty', () => {
-    render(<TopBar user={mockUser} repo={mockRepo} technologies={[]} />)
+    render(<TopBar user={mockUser} repo={mockRepo} technologies={[]} />, { wrapper: createWrapper() })
 
     // TechTags should not render anything for empty array
     expect(screen.queryByText('TypeScript')).not.toBeInTheDocument()
@@ -77,7 +101,8 @@ describe('TopBar', () => {
         user={mockUser}
         showMenuButton={true}
         onMenuClick={mockOnMenuClick}
-      />
+      />,
+      { wrapper: createWrapper() }
     )
 
     const menuButton = screen.getByRole('button', { name: /ouvrir le menu/i })
@@ -91,7 +116,8 @@ describe('TopBar', () => {
         user={mockUser}
         showMenuButton={true}
         onMenuClick={mockOnMenuClick}
-      />
+      />,
+      { wrapper: createWrapper() }
     )
 
     const menuButton = screen.getByRole('button', { name: /ouvrir le menu/i })
@@ -101,13 +127,13 @@ describe('TopBar', () => {
   })
 
   it('does not show menu button when showMenuButton is false', () => {
-    render(<TopBar user={mockUser} showMenuButton={false} />)
+    render(<TopBar user={mockUser} showMenuButton={false} />, { wrapper: createWrapper() })
 
     expect(screen.queryByRole('button', { name: /ouvrir le menu/i })).not.toBeInTheDocument()
   })
 
   it('renders header with sticky positioning', () => {
-    const { container } = render(<TopBar user={mockUser} />)
+    const { container } = render(<TopBar user={mockUser} />, { wrapper: createWrapper() })
 
     const header = container.querySelector('header')
     expect(header).toHaveClass('sticky')

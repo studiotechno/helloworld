@@ -4,6 +4,14 @@ import { getCurrentUser } from '@/lib/auth/sync-user'
 import { prisma } from '@/lib/db/prisma'
 import { z } from 'zod'
 import { buildSystemPromptWithContext } from '@/lib/ai/prompts'
+import { isRepositoryIndexed } from '@/lib/indexing'
+import {
+  smartRetrieve,
+  getRetrievalSummary,
+  buildCodeContext,
+  extractCitations,
+  type RetrievedChunk,
+} from '@/lib/rag'
 
 // Part schema for AI SDK v6 message format
 // Accept any part type (text, tool_call, tool_result, etc.)
@@ -70,8 +78,6 @@ export async function POST(req: Request) {
     const parseResult = chatRequestSchema.safeParse(body)
 
     if (!parseResult.success) {
-      console.error('[API] Chat validation error:', JSON.stringify(parseResult.error.issues, null, 2))
-      console.error('[API] Request body:', JSON.stringify(body, null, 2).substring(0, 1000))
       return new Response(
         JSON.stringify({
           error: {
@@ -86,11 +92,36 @@ export async function POST(req: Request) {
 
     const { messages: rawMessages, repoId, conversationId: existingConversationId } = parseResult.data
 
-    // Convert messages to the format expected by streamText
-    const messages = rawMessages.map((msg) => ({
+    // If we have an existing conversation, load previous messages from DB
+    // Optimization: Limit to last 10 messages (5 exchanges) to reduce token usage
+    const MAX_HISTORY_MESSAGES = 10
+    let conversationHistory: { role: 'user' | 'assistant' | 'system'; content: string }[] = []
+    if (existingConversationId) {
+      const previousMessages = await prisma.messages.findMany({
+        where: { conversation_id: existingConversationId },
+        orderBy: { created_at: 'desc' }, // Get most recent first
+        take: MAX_HISTORY_MESSAGES,
+        select: { role: true, content: true },
+      })
+      // Reverse to get chronological order
+      conversationHistory = previousMessages.reverse().map((msg) => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      }))
+    }
+
+    // Convert new messages from request to the format expected by streamText
+    const newMessages = rawMessages.map((msg) => ({
       role: msg.role,
       content: getMessageContent(msg),
     }))
+
+    // Combine history + new messages (avoid duplicates by only adding truly new messages)
+    // The new messages from client might already be in history if this is a retry
+    const historyContents = new Set(conversationHistory.map(m => m.content))
+    const uniqueNewMessages = newMessages.filter(m => !historyContents.has(m.content))
+
+    const messages = [...conversationHistory, ...uniqueNewMessages]
 
     // Get the last user message for persistence
     const lastUserMessage = [...rawMessages].reverse().find((m) => m.role === 'user')
@@ -153,23 +184,86 @@ export async function POST(req: Request) {
       }
     }
 
+    // RAG: Retrieve relevant code chunks if repository is indexed
+    let codeContext = ''
+    let retrievedChunks: RetrievedChunk[] = []
+    let isIndexed = false
+
+    if (repoId) {
+      try {
+        isIndexed = await isRepositoryIndexed(repoId)
+
+        if (isIndexed && lastUserContent) {
+          // Use smart retrieval to find relevant code based on user's question
+          // This automatically selects the best strategy:
+          // - Metadata-based for "list all X" queries (exhaustive results)
+          // - Vector search for specific questions (semantic matching)
+          // - Hybrid for detected types that aren't list queries
+          // Optimization: Reduced limits to save tokens while maintaining quality
+          const retrievalResult = await smartRetrieve(lastUserContent, repoId, {
+            vectorLimit: 15,      // Was 30 - still good semantic coverage
+            metadataLimit: 50,    // Was 100 - sufficient for list queries
+          })
+          retrievedChunks = retrievalResult.chunks
+
+          // Log retrieval strategy for debugging
+          console.log('[API]', getRetrievalSummary(retrievalResult))
+
+          if (retrievedChunks.length > 0) {
+            // Build formatted context for the LLM
+            // Optimization: Reduced from 25000 to 10000 tokens
+            const contextResult = buildCodeContext(retrievedChunks, {
+              maxTokens: 10000,
+              groupByFile: true,
+              language: 'fr',
+            })
+            codeContext = contextResult.context
+
+            // Log token usage for monitoring
+            console.log(`[API] Context: ${contextResult.chunksIncluded}/${contextResult.chunksTotal} chunks, ~${contextResult.estimatedTokens} tokens`)
+          }
+        }
+      } catch (error) {
+        // Log but don't fail the request if RAG fails
+        console.error('[API] RAG retrieval error:', error)
+      }
+    }
+
     // Build the system prompt with confidence handling and repo context
-    const systemPrompt = buildSystemPromptWithContext(repoContext)
+    let systemPrompt = buildSystemPromptWithContext(repoContext)
+
+    // Add code context to system prompt if available
+    if (codeContext) {
+      systemPrompt += `\n\n${codeContext}`
+    } else if (repoId && !isIndexed) {
+      // Inform Claude that indexing is not complete
+      systemPrompt += `\n\n## Note sur l'indexation
+
+Le repository n'est pas encore indexe. Tu ne disposes pas du contexte du code source.
+Reponds du mieux possible en te basant sur les informations generales, et suggere a l'utilisateur de patienter pendant l'indexation.`
+    }
 
     // Stream the response using Anthropic Claude
+    // Optimization: Reduced maxOutputTokens from 4096 to 2048
     const result = await streamText({
       model: anthropic('claude-sonnet-4-20250514'),
       messages,
       system: systemPrompt,
-      maxOutputTokens: 4096,
+      maxOutputTokens: 2048,
       onFinish: async ({ text }) => {
         // Save assistant message after streaming completes
         if (conversationId && text) {
+          // Extract citations from retrieved chunks
+          const citations = retrievedChunks.length > 0
+            ? extractCitations(retrievedChunks)
+            : []
+
           await prisma.messages.create({
             data: {
               conversation_id: conversationId,
               role: 'assistant',
               content: text,
+              citations: citations,
             },
           })
 
@@ -188,6 +282,12 @@ export async function POST(req: Request) {
     // Add conversation ID to response headers
     if (conversationId) {
       response.headers.set('X-Conversation-Id', conversationId)
+    }
+
+    // Add indexing status headers
+    if (repoId) {
+      response.headers.set('X-Repository-Indexed', isIndexed ? 'true' : 'false')
+      response.headers.set('X-Code-Chunks-Used', String(retrievedChunks.length))
     }
 
     return response

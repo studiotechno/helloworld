@@ -137,3 +137,51 @@ export function useDeleteConversation() {
     },
   })
 }
+
+/**
+ * Hook to rename a conversation
+ */
+export function useRenameConversation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ conversationId, title }: { conversationId: string; title: string }) => {
+      const response = await fetch(`/api/conversations/${conversationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+        throw new Error(error?.error?.message || 'Failed to rename conversation')
+      }
+      return response.json()
+    },
+    onMutate: async ({ conversationId, title }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['conversations'] })
+
+      // Snapshot the previous value
+      const previousConversations = queryClient.getQueryData<Conversation[]>(['conversations'])
+
+      // Optimistically update
+      queryClient.setQueryData<Conversation[]>(['conversations'], (old) =>
+        old?.map((c) => (c.id === conversationId ? { ...c, title } : c))
+      )
+
+      return { previousConversations }
+    },
+    onError: (_err, _variables, context) => {
+      // Rollback on error
+      if (context?.previousConversations) {
+        queryClient.setQueryData(['conversations'], context.previousConversations)
+      }
+    },
+    onSettled: () => {
+      // Refetch after error or success
+      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+    },
+  })
+}

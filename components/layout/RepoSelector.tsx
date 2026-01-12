@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { GitBranch, ChevronDown, FolderGit2, ArrowRightLeft } from 'lucide-react'
+import { GitBranch, ChevronDown, FolderGit2, ArrowRightLeft, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -13,6 +13,8 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { ConnectedRepository } from '@/hooks/useConnectRepo'
+import { useIndexingStatus, getStatusLabel } from '@/hooks/useIndexingStatus'
+import { IndexingBadge } from '@/components/repos/IndexingProgress'
 
 interface RepoSelectorProps {
   repo: ConnectedRepository | null
@@ -22,6 +24,16 @@ interface RepoSelectorProps {
 
 export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) {
   const router = useRouter()
+
+  // Fetch indexing status for the active repo
+  const {
+    status,
+    isIndexed,
+    isInProgress,
+    startIndexing,
+    isStarting,
+    isLoading: isLoadingStatus,
+  } = useIndexingStatus(repo?.id)
 
   // Loading state
   if (isLoading) {
@@ -65,6 +77,9 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
           <span className="max-w-[180px] truncate font-medium">
             {repo.full_name}
           </span>
+          {!isLoadingStatus && (
+            <IndexingBadge status={status} />
+          )}
           <span className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
             <GitBranch className="size-3" />
             {repo.default_branch}
@@ -75,10 +90,33 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
       <DropdownMenuContent align="start" className="w-56">
         <div className="px-2 py-1.5">
           <p className="text-sm font-medium">{repo.full_name}</p>
-          <p className="text-xs text-muted-foreground">
-            Branche: {repo.default_branch}
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">
+              Branche: {repo.default_branch}
+            </p>
+            {!isLoadingStatus && (
+              <span className="text-xs text-muted-foreground">
+                • {getStatusLabel(status)}
+              </span>
+            )}
+          </div>
         </div>
+        <DropdownMenuSeparator />
+        {/* Re-index / Start indexing option */}
+        <DropdownMenuItem
+          onClick={() => startIndexing()}
+          disabled={isInProgress || isStarting}
+          className="gap-2 cursor-pointer"
+        >
+          <RefreshCw className={cn('size-4', (isInProgress || isStarting) && 'animate-spin')} />
+          <span>
+            {isInProgress
+              ? 'Indexation en cours...'
+              : isIndexed
+                ? 'Re-indexer'
+                : 'Demarrer l\'indexation'}
+          </span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => router.push('/repos')}

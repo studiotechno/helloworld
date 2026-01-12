@@ -3,12 +3,18 @@
 import { GitFork, Star, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { GitHubRepo } from '@/lib/github/types'
+import { IndexingBadge } from './IndexingProgress'
+import { useIndexingStatus } from '@/hooks/useIndexingStatus'
 
 interface RepoCardProps {
   repo: GitHubRepo
   onClick?: () => void
   isActive?: boolean
   className?: string
+  /** Optional repository ID for showing indexing status */
+  repositoryId?: string
+  /** Whether to show indexing status badge (default: true when repositoryId provided) */
+  showIndexingStatus?: boolean
 }
 
 // Language color mapping (matches GitHub's language colors)
@@ -59,8 +65,23 @@ function formatRelativeTime(dateString: string): string {
   return `il y a ${years} an${years > 1 ? 's' : ''}`
 }
 
-export function RepoCard({ repo, onClick, isActive, className }: RepoCardProps) {
+export function RepoCard({
+  repo,
+  onClick,
+  isActive,
+  className,
+  repositoryId,
+  showIndexingStatus = true,
+}: RepoCardProps) {
   const languageColor = repo.language ? languageColors[repo.language] || 'bg-gray-400' : null
+
+  // Fetch indexing status if repositoryId is provided
+  const { status, isLoading: isLoadingStatus } = useIndexingStatus(
+    showIndexingStatus ? repositoryId : null,
+    { enablePolling: true }
+  )
+
+  const shouldShowIndexingBadge = showIndexingStatus && repositoryId && !isLoadingStatus
 
   return (
     <button
@@ -88,6 +109,9 @@ export function RepoCard({ repo, onClick, isActive, className }: RepoCardProps) 
           <span className="font-medium text-foreground truncate">{repo.full_name}</span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          {shouldShowIndexingBadge && (
+            <IndexingBadge status={status} />
+          )}
           {isActive && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-500 font-medium">
               Connecte

@@ -9,6 +9,7 @@ import {
   ChatContainer,
   ChatInput,
   ChatMessage,
+  CitationProvider,
   TypingIndicator,
   AnalysisLoader,
   ScrollToBottom,
@@ -35,6 +36,20 @@ interface ConversationData {
     repository_id: string
   }
   messages: StoredMessage[]
+}
+
+// Helper to extract text content from a chat message (supports both content string and parts array)
+function extractMessageContent(message: { content?: string; parts?: Array<{ type: string; text?: string }> }): string {
+  if (message.content && typeof message.content === 'string') {
+    return message.content
+  }
+  if (message.parts) {
+    return message.parts
+      .filter((part): part is { type: 'text'; text: string } => part.type === 'text' && typeof part.text === 'string')
+      .map((part) => part.text)
+      .join('')
+  }
+  return ''
 }
 
 export default function ConversationPage({ params }: ConversationPageProps) {
@@ -107,10 +122,13 @@ export default function ConversationPage({ params }: ConversationPageProps) {
     }))
   }, [storedMessages])
 
-  // useChat hook - pass messages so it has context when continuing conversation
+  // Track the previous status for detecting when streaming completes
+  const previousStatusRef = useRef<string>('')
+
+  // useChat hook - use conversationId as id to force reinitialize when conversation changes
   const { messages: chatMessages, sendMessage, status, error } = useChat({
+    id: conversationId || undefined, // Forces hook to reinitialize when conversationId changes
     transport,
-    messages: initialMessages,
     onError: (err) => {
       console.error('[Chat] Error:', err)
       toast.error('Une erreur est survenue. Veuillez reessayer.')
@@ -122,15 +140,52 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   // Analysis loader state management
   const analysisLoader = useAnalysisLoader(status === 'submitted')
 
-  // Combine stored messages with new chat messages
-  // Chat messages from useChat start fresh, so we show stored + new
-  const allMessages = useMemo(() => {
-    // If we have chat messages, they include the context from initialMessages
-    // So we should show them. Otherwise, show stored messages.
-    if (chatMessages.length > 0) {
-      return chatMessages
+  // Reload messages from DB after streaming completes
+  useEffect(() => {
+    const prevStatus = previousStatusRef.current
+
+    // After streaming completes, reload messages from database
+    if (prevStatus === 'streaming' && status === 'ready' && conversationId) {
+      const reloadMessages = async () => {
+        try {
+          const response = await fetch(`/api/conversations/${conversationId}/messages`)
+          if (response.ok) {
+            const data: ConversationData = await response.json()
+            setStoredMessages(data.messages)
+          }
+        } catch (err) {
+          // Silently fail - messages will be loaded on next interaction
+        }
+      }
+      reloadMessages()
     }
-    return initialMessages
+
+    previousStatusRef.current = status
+  }, [status, conversationId])
+
+  // Messages to display:
+  // - Show stored messages from DB as the base
+  // - When streaming, append new messages from chatMessages (optimistic UI)
+  // - Deduplicate by ID to prevent duplicates after DB reload
+  const allMessages = useMemo(() => {
+    if (chatMessages.length === 0) {
+      return initialMessages
+    }
+
+    // Create a Set of stored message IDs for deduplication
+    const storedIds = new Set(initialMessages.map((m) => m.id))
+
+    // Filter out chatMessages that are already in stored messages
+    const newChatMessages = chatMessages
+      .filter((m) => !storedIds.has(m.id))
+      .map((m) => ({
+        id: m.id,
+        role: m.role as 'user' | 'assistant',
+        content: extractMessageContent(m),
+        parts: m.parts,
+      }))
+
+    return [...initialMessages, ...newChatMessages]
   }, [chatMessages, initialMessages])
 
   // Redirect to repos if no active repo
@@ -180,20 +235,6 @@ export default function ConversationPage({ params }: ConversationPageProps) {
   const handleInputChange = useCallback((value: string) => {
     setInputValue(value)
   }, [])
-
-  // Helper function to extract text content from message parts
-  const getMessageContent = (message: (typeof allMessages)[number]): string => {
-    if ('content' in message && typeof message.content === 'string') {
-      return message.content
-    }
-    if ('parts' in message && message.parts) {
-      return message.parts
-        .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
-        .map((part) => part.text)
-        .join('')
-    }
-    return ''
-  }
 
   // Loading state
   if (repoLoading || !conversationId || isLoadingMessages) {
@@ -253,39 +294,44 @@ export default function ConversationPage({ params }: ConversationPageProps) {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
       >
-        {hasMessages ? (
-          <div className="space-y-2 py-4">
-            {allMessages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                role={message.role as 'user' | 'assistant'}
-                content={getMessageContent(message)}
-                isStreaming={
-                  status === 'streaming' &&
-                  message.role === 'assistant' &&
-                  message.id === allMessages[allMessages.length - 1]?.id
-                }
-              />
-            ))}
-            {status === 'submitted' && allMessages[allMessages.length - 1]?.role === 'user' && (
-              analysisLoader.showLoader ? (
-                <AnalysisLoader
-                  phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
-                  message={analysisLoader.message}
-                  filesAnalyzed={analysisLoader.filesAnalyzed}
-                  foldersAnalyzed={analysisLoader.foldersAnalyzed}
-                  onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+        <CitationProvider
+          repoFullName={activeRepo?.full_name}
+          defaultBranch={activeRepo?.default_branch}
+        >
+          {hasMessages ? (
+            <div className="space-y-2 py-4">
+              {allMessages.map((message) => (
+                <ChatMessage
+                  key={message.id}
+                  role={message.role as 'user' | 'assistant'}
+                  content={extractMessageContent(message)}
+                  isStreaming={
+                    status === 'streaming' &&
+                    message.role === 'assistant' &&
+                    message.id === allMessages[allMessages.length - 1]?.id
+                  }
                 />
-              ) : (
-                <TypingIndicator />
-              )
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-1 items-center justify-center py-8">
-            <p className="text-muted-foreground">Aucun message dans cette conversation</p>
-          </div>
-        )}
+              ))}
+              {status === 'submitted' && allMessages[allMessages.length - 1]?.role === 'user' && (
+                analysisLoader.showLoader ? (
+                  <AnalysisLoader
+                    phase={analysisLoader.phase as 'loading' | 'scanning' | 'processing' | 'timeout'}
+                    message={analysisLoader.message}
+                    filesAnalyzed={analysisLoader.filesAnalyzed}
+                    foldersAnalyzed={analysisLoader.foldersAnalyzed}
+                    onCancel={analysisLoader.phase === 'timeout' ? analysisLoader.reset : undefined}
+                  />
+                ) : (
+                  <TypingIndicator />
+                )
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center py-8">
+              <p className="text-muted-foreground">Aucun message dans cette conversation</p>
+            </div>
+          )}
+        </CitationProvider>
       </div>
 
       {/* Scroll to bottom button */}

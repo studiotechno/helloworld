@@ -16,7 +16,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useConversations, useDeleteConversation, type Conversation } from '@/hooks/use-conversations'
+import { useConversations, useDeleteConversation, useRenameConversation, type Conversation } from '@/hooks/use-conversations'
 import { groupConversationsByDate, DATE_GROUP_LABELS, DATE_GROUP_ORDER } from '@/lib/utils/date-groups'
 import { ConversationItem } from './ConversationItem'
 import { DeleteConversationDialog } from './DeleteConversationDialog'
@@ -33,6 +33,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
   const { data: conversations, isLoading: conversationsLoading } = useConversations()
   const deleteConversation = useDeleteConversation()
+  const renameConversation = useRenameConversation()
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -60,6 +61,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const handleDeleteClick = (conversation: Conversation) => {
     setConversationToDelete(conversation)
     setDeleteDialogOpen(true)
+  }
+
+  const handleRename = (conversationId: string, newTitle: string) => {
+    renameConversation.mutate({ conversationId, title: newTitle })
   }
 
   const handleDeleteConfirm = async () => {
@@ -186,6 +191,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                               conversation={conversation}
                               isCollapsed={false}
                               onDeleteClick={handleDeleteClick}
+                              onRename={handleRename}
                             />
                           ))}
                         </div>
@@ -212,6 +218,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                       conversation={conversation}
                       isCollapsed={true}
                       onDeleteClick={handleDeleteClick}
+                      onRename={handleRename}
                     />
                   ))
                 ) : (

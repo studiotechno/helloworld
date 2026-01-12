@@ -43,9 +43,71 @@ model repositories {
   // Relations
   user          users          @relation(fields: [user_id], references: [id], onDelete: Cascade)
   conversations conversations[]
+  code_chunks   code_chunks[]
+  indexing_job  indexing_jobs?
 
   @@unique([user_id, github_repo_id])
   @@map("repositories")
+}
+
+// Code Chunks table - stores indexed code with embeddings for RAG
+model code_chunks {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  repository_id String   @db.Uuid
+
+  // Localisation
+  file_path  String
+  start_line Int
+  end_line   Int
+
+  // Contenu
+  content    String @db.Text
+  language   String // typescript, python, go, etc.
+  chunk_type String // function, class, interface, config, other
+
+  // Metadata pour ameliorer le retrieval
+  symbol_name  String?  // Nom de la fonction/classe
+  dependencies String[] @default([]) // Imports detectes
+
+  // Note: embedding column is added via raw SQL migration (pgvector)
+  // ALTER TABLE code_chunks ADD COLUMN embedding vector(1024);
+
+  // Tracking
+  file_hash  String   // SHA256 du fichier pour detecter changements
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  repository repositories @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+
+  @@index([repository_id])
+  @@index([file_path])
+  @@index([chunk_type])
+  @@map("code_chunks")
+}
+
+// Indexing Jobs table - tracks code indexation progress
+model indexing_jobs {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  repository_id String @unique @db.Uuid
+
+  status   String @default("pending") // pending, fetching, parsing, embedding, completed, failed
+  progress Int    @default(0) // 0-100
+
+  files_total     Int @default(0)
+  files_processed Int @default(0)
+  chunks_created  Int @default(0)
+
+  current_phase String? // "Fetching files", "Parsing code", "Generating embeddings"
+  error_message String? @db.Text
+
+  started_at   DateTime? @db.Timestamptz(6)
+  completed_at DateTime? @db.Timestamptz(6)
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  repository repositories @relation(fields: [repository_id], references: [id], onDelete: Cascade)
+
+  @@map("indexing_jobs")
 }
 
 // Conversations table - stores chat conversations
