@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { FolderGit2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RepoList, SizeWarningDialog, IndexedReposSection } from '@/components/repos'
 import { useConnectRepo } from '@/hooks/useConnectRepo'
@@ -87,21 +86,14 @@ export default function ReposPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="p-6">
+      <div className="mx-auto max-w-4xl space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="rounded-lg bg-pink-500/10 p-2">
-            <FolderGit2 className="h-6 w-6 text-pink-500" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Séléctionnez un repository
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Choisissez le repository GitHub que vous souhaitez analyser
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Repositories</h1>
+          <p className="text-muted-foreground">
+            Choisissez le repository GitHub que vous souhaitez analyser
+          </p>
         </div>
 
         {/* Indexed repos section */}
@@ -109,20 +101,20 @@ export default function ReposPage() {
 
         {/* Repo list with search */}
         <RepoList onSelectRepo={handleSelectRepo} />
-
-        {/* Size warning dialog */}
-        {pendingRepo && (
-          <SizeWarningDialog
-            open={showSizeWarning}
-            onOpenChange={setShowSizeWarning}
-            repoName={pendingRepo.full_name}
-            sizeKB={pendingRepo.size}
-            onConfirm={handleSizeWarningConfirm}
-            onCancel={handleSizeWarningCancel}
-            isLoading={connectRepo.isPending}
-          />
-        )}
       </div>
+
+      {/* Size warning dialog */}
+      {pendingRepo && (
+        <SizeWarningDialog
+          open={showSizeWarning}
+          onOpenChange={setShowSizeWarning}
+          repoName={pendingRepo.full_name}
+          sizeKB={pendingRepo.size}
+          onConfirm={handleSizeWarningConfirm}
+          onCancel={handleSizeWarningCancel}
+          isLoading={connectRepo.isPending}
+        />
+      )}
     </div>
   )
 }

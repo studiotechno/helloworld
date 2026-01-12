@@ -167,28 +167,40 @@ export function useRenameConversation() {
       return response.json()
     },
     onMutate: async ({ conversationId, title }) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['conversations'] })
+      // Cancel any outgoing refetches for all conversation queries
+      await queryClient.cancelQueries({ queryKey: ['conversations'], exact: false })
 
-      // Snapshot the previous value
-      const previousConversations = queryClient.getQueryData<Conversation[]>(['conversations'])
+      // Get all conversation query caches and update them
+      const queryCache = queryClient.getQueryCache()
+      const conversationQueries = queryCache.findAll({ queryKey: ['conversations'] })
 
-      // Optimistically update
-      queryClient.setQueryData<Conversation[]>(['conversations'], (old) =>
-        old?.map((c) => (c.id === conversationId ? { ...c, title } : c))
-      )
+      const previousData: Map<string, Conversation[] | undefined> = new Map()
 
-      return { previousConversations }
+      conversationQueries.forEach((query) => {
+        const queryKey = query.queryKey as [string, string]
+        const data = queryClient.getQueryData<Conversation[]>(queryKey)
+        previousData.set(JSON.stringify(queryKey), data)
+
+        // Optimistically update each cache
+        queryClient.setQueryData<Conversation[]>(queryKey, (old) =>
+          old?.map((c) => (c.id === conversationId ? { ...c, title } : c))
+        )
+      })
+
+      return { previousData }
     },
     onError: (_err, _variables, context) => {
-      // Rollback on error
-      if (context?.previousConversations) {
-        queryClient.setQueryData(['conversations'], context.previousConversations)
+      // Rollback all caches on error
+      if (context?.previousData) {
+        context.previousData.forEach((data, keyString) => {
+          const queryKey = JSON.parse(keyString)
+          queryClient.setQueryData(queryKey, data)
+        })
       }
     },
     onSettled: () => {
       // Refetch after error or success
-      queryClient.invalidateQueries({ queryKey: ['conversations'] })
+      queryClient.invalidateQueries({ queryKey: ['conversations'], exact: false })
     },
   })
 }

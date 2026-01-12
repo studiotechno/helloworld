@@ -17,9 +17,9 @@ import { models } from '../ai/client'
 // Maximum tokens for context generation (keep it brief)
 const MAX_CONTEXT_TOKENS = 150
 
-// Rate limiting
-const BATCH_SIZE = 10 // Process chunks in batches
-const BATCH_DELAY_MS = 100 // Small delay between batches to avoid rate limits
+// Rate limiting for Mistral API (much more generous than Anthropic)
+const BATCH_SIZE = 10 // Process chunks in parallel batches
+const BATCH_DELAY_MS = 500 // Small delay between batches
 
 export interface ChunkForContext {
   content: string
@@ -84,21 +84,41 @@ export async function generateChunkContext(
   prompt += `\nCode chunk to describe:\n\`\`\`${chunk.language}\n${chunk.content}\n\`\`\`\n`
   prompt += `\nGenerate a brief description:`
 
-  try {
-    const { text } = await generateText({
-      model: models.haiku,
-      system: CONTEXT_SYSTEM_PROMPT,
-      prompt,
-      maxOutputTokens: MAX_CONTEXT_TOKENS,
-      temperature: 0, // Deterministic output
-    })
+  const maxRetries = 5
 
-    return text.trim()
-  } catch (error) {
-    console.error('[ContextualGenerator] Error generating context:', error)
-    // Return empty string on error - context is optional
-    return ''
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const { text } = await generateText({
+        model: models.devstral,
+        system: CONTEXT_SYSTEM_PROMPT,
+        prompt,
+        maxOutputTokens: MAX_CONTEXT_TOKENS,
+        temperature: 0, // Deterministic output
+      })
+
+      return text.trim()
+    } catch (error: unknown) {
+      // Check for rate limit error
+      const isRateLimit = error instanceof Error &&
+        (error.message.includes('rate_limit') ||
+         error.message.includes('429') ||
+         (error as { statusCode?: number }).statusCode === 429)
+
+      if (isRateLimit && attempt < maxRetries - 1) {
+        // Extract retry-after from error if available, default to 15 seconds
+        const retryAfter = 15000
+        console.log(`[ContextualGenerator] Rate limited, waiting ${retryAfter / 1000}s before retry ${attempt + 1}/${maxRetries}`)
+        await new Promise((resolve) => setTimeout(resolve, retryAfter))
+        continue
+      }
+
+      console.error('[ContextualGenerator] Error generating context:', error)
+      // Return empty string on error - context is optional
+      return ''
+    }
   }
+
+  return ''
 }
 
 /**
