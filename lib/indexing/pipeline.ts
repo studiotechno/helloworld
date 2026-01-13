@@ -52,7 +52,7 @@ export interface PipelineOptions {
   branch?: string
   jobId: string
   onProgress?: (phase: JobPhase, progress: number, message: string) => void
-  /** Generate contextual descriptions for chunks using Haiku (default: true) */
+  /** Generate contextual descriptions for chunks using Devstral (default: true - Mistral Scale is fast) */
   useContextualRetrieval?: boolean
 }
 
@@ -85,7 +85,7 @@ export async function runIndexationPipeline(
     branch,
     jobId,
     onProgress,
-    useContextualRetrieval = true, // Enable by default
+    useContextualRetrieval = true, // Enabled by default - Groq is fast enough
   } = options
 
   let filesProcessed = 0

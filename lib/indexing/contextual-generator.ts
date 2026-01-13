@@ -4,22 +4,23 @@
  * Implements Anthropic's Contextual Retrieval technique:
  * https://www.anthropic.com/news/contextual-retrieval
  *
- * Uses Claude Haiku to generate brief contextual descriptions for each code chunk
+ * Uses Devstral to generate brief contextual descriptions for each code chunk
  * that explain what the chunk does in the context of the file and codebase.
  *
- * This context is prepended to the chunk content before embedding, which
- * significantly improves retrieval quality for ambiguous queries.
+ * OPTIMIZED: Batches multiple chunks into a single LLM request to minimize
+ * API calls and avoid rate limits.
  */
 
 import { generateText } from 'ai'
 import { models } from '../ai/client'
 
-// Maximum tokens for context generation (keep it brief)
-const MAX_CONTEXT_TOKENS = 150
+// Maximum tokens for context generation
+const MAX_OUTPUT_TOKENS = 2000 // Increased for batch responses
 
-// Rate limiting for Mistral API (much more generous than Anthropic)
-const BATCH_SIZE = 10 // Process chunks in parallel batches
-const BATCH_DELAY_MS = 500 // Small delay between batches
+// Batching configuration for Mistral Scale (6 req/sec = 360 req/min)
+// Ultra-fast indexation with Devstral code-specialized model
+const CHUNKS_PER_REQUEST = 15 // Number of chunks to describe in one LLM call
+const REQUEST_DELAY_MS = 200 // 200ms between requests (5 req/sec, safe margin for 6 req/sec limit)
 
 export interface ChunkForContext {
   content: string
@@ -41,106 +42,132 @@ export interface FileContext {
 }
 
 /**
- * System prompt for context generation
+ * System prompt for batch context generation
  */
-const CONTEXT_SYSTEM_PROMPT = `You are a code documentation assistant. Given a code chunk and its surrounding file context, generate a brief (1-2 sentences) description of what this code does and its role in the file.
+const BATCH_CONTEXT_SYSTEM_PROMPT = `You are a code documentation assistant. You will receive multiple code chunks and must generate a brief description for each one.
 
-Rules:
+Rules for each description:
 - Be specific about what the code does, not generic
 - Mention the function/class name if provided
 - Include relevant implementation details that would help find this code
 - Focus on the "what" and "why", not the "how"
-- Keep it under 50 words
+- Keep each description under 40 words
 - Do not use markdown formatting
 - Start directly with the description (no "This code..." or "The function...")
-- Use present tense`
+- Use present tense
+
+IMPORTANT: Return a JSON array with descriptions in the same order as the input chunks.
+Example response format:
+["Description for chunk 1", "Description for chunk 2", "Description for chunk 3"]`
 
 /**
- * Generate context for a single chunk
+ * Generate contexts for multiple chunks in a single LLM request
  */
-export async function generateChunkContext(
-  chunk: ChunkForContext,
-  fileContext?: FileContext
-): Promise<string> {
-  // Build the prompt
-  let prompt = `File: ${chunk.filePath}\n`
-  prompt += `Lines: ${chunk.startLine}-${chunk.endLine}\n`
-  prompt += `Type: ${chunk.chunkType}\n`
+async function generateBatchContexts(
+  chunks: ChunkForContext[]
+): Promise<string[]> {
+  if (chunks.length === 0) return []
 
-  if (chunk.symbolName) {
-    prompt += `Name: ${chunk.symbolName}\n`
-  }
+  // Build the prompt with all chunks
+  let prompt = `Generate brief descriptions for these ${chunks.length} code chunks:\n\n`
 
-  // Include file context if available (truncated to avoid token limits)
-  if (fileContext?.fullContent) {
-    const maxFileContextChars = 2000
-    const truncatedContext =
-      fileContext.fullContent.length > maxFileContextChars
-        ? fileContext.fullContent.substring(0, maxFileContextChars) + '\n... (truncated)'
-        : fileContext.fullContent
-    prompt += `\nFull file context:\n\`\`\`${chunk.language}\n${truncatedContext}\n\`\`\`\n`
-  }
+  chunks.forEach((chunk, index) => {
+    prompt += `--- CHUNK ${index + 1} ---\n`
+    prompt += `File: ${chunk.filePath}\n`
+    prompt += `Lines: ${chunk.startLine}-${chunk.endLine}\n`
+    prompt += `Type: ${chunk.chunkType}\n`
+    if (chunk.symbolName) {
+      prompt += `Name: ${chunk.symbolName}\n`
+    }
+    prompt += `\`\`\`${chunk.language}\n${chunk.content}\n\`\`\`\n\n`
+  })
 
-  prompt += `\nCode chunk to describe:\n\`\`\`${chunk.language}\n${chunk.content}\n\`\`\`\n`
-  prompt += `\nGenerate a brief description:`
+  prompt += `Return a JSON array with ${chunks.length} descriptions, one for each chunk in order.`
 
-  const maxRetries = 5
+  const maxRetries = 3
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const { text } = await generateText({
         model: models.devstral,
-        system: CONTEXT_SYSTEM_PROMPT,
+        system: BATCH_CONTEXT_SYSTEM_PROMPT,
         prompt,
-        maxOutputTokens: MAX_CONTEXT_TOKENS,
-        temperature: 0, // Deterministic output
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        temperature: 0,
       })
 
-      return text.trim()
-    } catch (error: unknown) {
-      // Check for rate limit error
-      const isRateLimit = error instanceof Error &&
-        (error.message.includes('rate_limit') ||
-         error.message.includes('429') ||
-         (error as { statusCode?: number }).statusCode === 429)
-
-      if (isRateLimit && attempt < maxRetries - 1) {
-        // Extract retry-after from error if available, default to 15 seconds
-        const retryAfter = 15000
-        console.log(`[ContextualGenerator] Rate limited, waiting ${retryAfter / 1000}s before retry ${attempt + 1}/${maxRetries}`)
-        await new Promise((resolve) => setTimeout(resolve, retryAfter))
+      // Parse the JSON response
+      const jsonMatch = text.match(/\[[\s\S]*\]/)
+      if (!jsonMatch) {
+        console.warn('[ContextualGenerator] Could not find JSON array in response, retrying...')
         continue
       }
 
-      console.error('[ContextualGenerator] Error generating context:', error)
-      // Return empty string on error - context is optional
-      return ''
+      const descriptions = JSON.parse(jsonMatch[0]) as string[]
+
+      // Validate we got the right number of descriptions
+      if (descriptions.length !== chunks.length) {
+        console.warn(
+          `[ContextualGenerator] Got ${descriptions.length} descriptions for ${chunks.length} chunks, padding/truncating...`
+        )
+        // Pad with empty strings or truncate
+        while (descriptions.length < chunks.length) {
+          descriptions.push('')
+        }
+        return descriptions.slice(0, chunks.length)
+      }
+
+      return descriptions
+    } catch (error: unknown) {
+      const isRateLimit =
+        error instanceof Error &&
+        (error.message.includes('rate_limit') ||
+          error.message.includes('Rate limit') ||
+          error.message.includes('429') ||
+          (error as { statusCode?: number }).statusCode === 429)
+
+      if (isRateLimit && attempt < maxRetries - 1) {
+        const retryDelay = 10000 // 10 seconds for rate limit
+        console.log(
+          `[ContextualGenerator] Rate limited, waiting ${retryDelay / 1000}s before retry ${attempt + 1}/${maxRetries}`
+        )
+        await new Promise((resolve) => setTimeout(resolve, retryDelay))
+        continue
+      }
+
+      const isJsonError = error instanceof SyntaxError
+      if (isJsonError && attempt < maxRetries - 1) {
+        console.warn('[ContextualGenerator] JSON parse error, retrying...')
+        continue
+      }
+
+      console.error('[ContextualGenerator] Error generating batch context:', error)
+      // Return empty strings for all chunks on error
+      return new Array(chunks.length).fill('')
     }
   }
 
-  return ''
+  return new Array(chunks.length).fill('')
 }
 
 /**
- * Generate contexts for multiple chunks in batch
+ * Generate contexts for all chunks using batched requests
  *
- * Processes chunks in parallel batches with rate limiting
+ * Processes chunks in batches of CHUNKS_PER_REQUEST to minimize API calls
  */
 export async function generateContextsBatch(
   chunks: ChunkForContext[],
-  fileContext?: FileContext,
+  _fileContext?: FileContext, // Reserved for future use
   onProgress?: (completed: number, total: number) => void
 ): Promise<string[]> {
   const results: string[] = new Array(chunks.length).fill('')
 
   // Process in batches
-  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-    const batch = chunks.slice(i, i + BATCH_SIZE)
+  for (let i = 0; i < chunks.length; i += CHUNKS_PER_REQUEST) {
+    const batch = chunks.slice(i, i + CHUNKS_PER_REQUEST)
 
-    // Process batch in parallel
-    const batchResults = await Promise.all(
-      batch.map((chunk) => generateChunkContext(chunk, fileContext))
-    )
+    // Generate contexts for this batch in a single request
+    const batchResults = await generateBatchContexts(batch)
 
     // Store results
     batchResults.forEach((context, idx) => {
@@ -148,16 +175,27 @@ export async function generateContextsBatch(
     })
 
     // Report progress
-    const completed = Math.min(i + BATCH_SIZE, chunks.length)
+    const completed = Math.min(i + CHUNKS_PER_REQUEST, chunks.length)
     onProgress?.(completed, chunks.length)
 
-    // Small delay between batches to avoid rate limiting
-    if (i + BATCH_SIZE < chunks.length) {
-      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS))
+    // Delay between batches to respect rate limit
+    if (i + CHUNKS_PER_REQUEST < chunks.length) {
+      await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS))
     }
   }
 
   return results
+}
+
+/**
+ * Generate context for a single chunk (legacy function, uses batch internally)
+ */
+export async function generateChunkContext(
+  chunk: ChunkForContext,
+  _fileContext?: FileContext
+): Promise<string> {
+  const results = await generateBatchContexts([chunk])
+  return results[0] || ''
 }
 
 /**
@@ -179,9 +217,7 @@ export function buildContextualContent(
 /**
  * Estimate the cost of generating contexts
  *
- * Based on Claude Haiku pricing:
- * - Input: $0.25 / 1M tokens
- * - Output: $1.25 / 1M tokens
+ * Based on Mistral Devstral pricing (much cheaper than Claude)
  */
 export function estimateContextGenerationCost(
   chunks: ChunkForContext[],
@@ -190,27 +226,37 @@ export function estimateContextGenerationCost(
   inputTokens: number
   outputTokens: number
   estimatedCostUSD: number
+  estimatedRequests: number
+  estimatedTimeSeconds: number
 } {
-  // Rough token estimates
-  const avgChunkTokens = 200 // Average chunk size
-  const systemPromptTokens = 150 // System prompt
-  const fileContextTokens = Math.ceil(avgFileContextChars / 4) // ~4 chars per token
-  const outputTokens = 50 // Target output size
+  const numRequests = Math.ceil(chunks.length / CHUNKS_PER_REQUEST)
 
-  const inputTokensPerChunk = systemPromptTokens + avgChunkTokens + fileContextTokens
-  const totalInputTokens = inputTokensPerChunk * chunks.length
-  const totalOutputTokens = outputTokens * chunks.length
+  // Rough token estimates per batch
+  const avgChunkTokens = 200
+  const systemPromptTokens = 200
+  const outputTokensPerChunk = 50
 
-  // Haiku pricing
-  const inputCostPer1M = 0.25
-  const outputCostPer1M = 1.25
+  const inputTokensPerBatch = systemPromptTokens + avgChunkTokens * CHUNKS_PER_REQUEST
+  const outputTokensPerBatch = outputTokensPerChunk * CHUNKS_PER_REQUEST
+
+  const totalInputTokens = inputTokensPerBatch * numRequests
+  const totalOutputTokens = outputTokensPerBatch * numRequests
+
+  // Devstral pricing (approximate)
+  const inputCostPer1M = 0.1
+  const outputCostPer1M = 0.3
 
   const inputCost = (totalInputTokens / 1_000_000) * inputCostPer1M
   const outputCost = (totalOutputTokens / 1_000_000) * outputCostPer1M
+
+  // Time estimate based on rate limiting
+  const estimatedTimeSeconds = numRequests * (REQUEST_DELAY_MS / 1000)
 
   return {
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
     estimatedCostUSD: inputCost + outputCost,
+    estimatedRequests: numRequests,
+    estimatedTimeSeconds,
   }
 }

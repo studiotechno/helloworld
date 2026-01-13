@@ -310,11 +310,11 @@ export function IndexingProgress({
         <Progress value={progress} className="h-2" />
         <div className="flex justify-between text-xs text-muted-foreground">
           <span>{progress}%</span>
-          {status.filesTotal !== undefined && status.filesProcessed !== undefined && (
+          {/* {status.filesTotal !== undefined && status.filesProcessed !== undefined && (
             <span>
               {status.filesProcessed} / {status.filesTotal} fichiers
             </span>
-          )}
+          )} */}
         </div>
       </div>
 

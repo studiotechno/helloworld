@@ -33,7 +33,7 @@ describe('DisconnectRepoDialog', () => {
   it('should render the dialog when open', () => {
     render(<DisconnectRepoDialog {...defaultProps} />)
 
-    expect(screen.getByText('Deconnecter le repository ?')).toBeInTheDocument()
+    expect(screen.getByText('Déconnecter le repository ?')).toBeInTheDocument()
     expect(screen.getByText('owner/my-repo')).toBeInTheDocument()
   })
 
@@ -47,7 +47,7 @@ describe('DisconnectRepoDialog', () => {
   it('should call onDisconnect when clicking disconnect button', async () => {
     render(<DisconnectRepoDialog {...defaultProps} />)
 
-    const disconnectButton = screen.getByRole('button', { name: /deconnecter/i })
+    const disconnectButton = screen.getByRole('button', { name: /déconnecter/i })
     fireEvent.click(disconnectButton)
 
     await waitFor(() => {
@@ -71,16 +71,16 @@ describe('DisconnectRepoDialog', () => {
 
     render(<DisconnectRepoDialog {...defaultProps} onDisconnect={slowDisconnect} />)
 
-    const disconnectButton = screen.getByRole('button', { name: /deconnecter/i })
+    const disconnectButton = screen.getByRole('button', { name: /déconnecter/i })
     fireEvent.click(disconnectButton)
 
-    expect(screen.getByText('Deconnexion...')).toBeInTheDocument()
+    expect(screen.getByText('Déconnexion...')).toBeInTheDocument()
   })
 
   it('should navigate to /repos on successful disconnect', async () => {
     render(<DisconnectRepoDialog {...defaultProps} />)
 
-    const disconnectButton = screen.getByRole('button', { name: /deconnecter/i })
+    const disconnectButton = screen.getByRole('button', { name: /déconnecter/i })
     fireEvent.click(disconnectButton)
 
     await waitFor(() => {
@@ -91,6 +91,6 @@ describe('DisconnectRepoDialog', () => {
   it('should not render when closed', () => {
     render(<DisconnectRepoDialog {...defaultProps} open={false} />)
 
-    expect(screen.queryByText('Deconnecter le repository ?')).not.toBeInTheDocument()
+    expect(screen.queryByText('Déconnecter le repository ?')).not.toBeInTheDocument()
   })
 })

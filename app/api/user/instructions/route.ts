@@ -87,18 +87,27 @@ export async function PUT(request: Request) {
 
     const { profile_instructions, team_instructions } = parsed.data
 
+    // Convert empty strings to null
+    const normalizedProfile = profile_instructions?.trim() || null
+    const normalizedTeam = team_instructions?.trim() || null
+
+    // Build update object - only include fields that were provided in the request
+    const updateData: Record<string, unknown> = { updated_at: new Date() }
+    if ('profile_instructions' in body) {
+      updateData.profile_instructions = normalizedProfile
+    }
+    if ('team_instructions' in body) {
+      updateData.team_instructions = normalizedTeam
+    }
+
     // Upsert: create if doesn't exist, update if it does
     const instructions = await prisma.user_instructions.upsert({
       where: { user_id: user.id },
-      update: {
-        profile_instructions: profile_instructions ?? undefined,
-        team_instructions: team_instructions ?? undefined,
-        updated_at: new Date(),
-      },
+      update: updateData,
       create: {
         user_id: user.id,
-        profile_instructions: profile_instructions ?? null,
-        team_instructions: team_instructions ?? null,
+        profile_instructions: normalizedProfile,
+        team_instructions: normalizedTeam,
       },
     })
 

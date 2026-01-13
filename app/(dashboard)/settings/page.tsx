@@ -207,7 +207,7 @@ export default function SettingsPage() {
 
                 <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 p-4">
                   <div>
-                    <p className="font-medium">Deconnecter ce repository</p>
+                    <p className="font-medium">Déconnecter ce repository</p>
                     <p className="text-sm text-muted-foreground">
                       Vos conversations resteront accessibles
                     </p>
@@ -218,7 +218,7 @@ export default function SettingsPage() {
                     onClick={() => setDisconnectDialogOpen(true)}
                   >
                     <Unplug className="size-4" />
-                    Deconnecter
+                    Déconnecter
                   </Button>
                 </div>
               </div>

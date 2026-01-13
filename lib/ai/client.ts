@@ -1,5 +1,6 @@
 import { anthropic } from '@ai-sdk/anthropic'
 import { mistral } from '@ai-sdk/mistral'
+import { groq } from '@ai-sdk/groq'
 
 // AI client configuration
 // Uses Vercel AI SDK for streaming responses
@@ -14,9 +15,11 @@ export const models = {
   fast: anthropic('claude-sonnet-4-20250514'),
   // Haiku model for high-volume, low-latency tasks (contextual retrieval, routing)
   haiku: anthropic('claude-3-5-haiku-20241022'),
-  // Devstral model for code-specific tasks (indexation, context generation)
-  // Uses Mistral's code-specialized model - faster and cheaper for code analysis
+  // Devstral model for code-specific tasks
   devstral: mistral('devstral-small-2505'),
+  // Groq model for ultra-fast context generation (LPU inference)
+  // Very high rate limits, perfect for batch processing
+  groq: groq('llama-3.1-8b-instant'),
 } as const
 
 export type ModelType = keyof typeof models

@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { RepoList, SizeWarningDialog, IndexedReposSection } from '@/components/repos'
+import { RepoList, SizeWarningDialog, IndexedReposSection, IndexingInProgressSection } from '@/components/repos'
 import { useConnectRepo } from '@/hooks/useConnectRepo'
 import { useRepos } from '@/hooks/useRepos'
 import { checkRepoSizeWarning } from '@/lib/github/client'
@@ -95,6 +95,9 @@ export default function ReposPage() {
             Choisissez le repository GitHub que vous souhaitez analyser
           </p>
         </div>
+
+        {/* Indexing in progress section */}
+        <IndexingInProgressSection />
 
         {/* Indexed repos section */}
         <IndexedReposSection />

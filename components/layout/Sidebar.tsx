@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useConversations, useDeleteConversation, useRenameConversation, type Conversation } from '@/hooks/use-conversations'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
+import { useIndexingStatus } from '@/hooks/useIndexingStatus'
 import { groupConversationsByDate, DATE_GROUP_LABELS, DATE_GROUP_ORDER } from '@/lib/utils/date-groups'
 import { ConversationItem } from './ConversationItem'
 import { DeleteConversationDialog } from './DeleteConversationDialog'
@@ -37,6 +38,10 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const { data: conversations, isLoading: conversationsLoading } = useConversations(activeRepo?.id)
   const deleteConversation = useDeleteConversation()
   const renameConversation = useRenameConversation()
+  const { isIndexed, isInProgress } = useIndexingStatus(activeRepo?.id)
+
+  // Can only create new conversation if repo is indexed
+  const canCreateConversation = activeRepo && isIndexed && !isInProgress
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -128,9 +133,13 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                onClick={() => router.push('/chat')}
+                onClick={() => canCreateConversation && router.push('/chat')}
+                disabled={!canCreateConversation}
                 className={cn(
-                  'w-full gap-2 rounded-xl bg-primary text-primary-foreground shadow-[var(--glow-pink)] transition-shadow hover:shadow-[0_0_30px_oklch(0.656_0.241_354.308_/_60%)]',
+                  'w-full gap-2 rounded-xl transition-shadow',
+                  canCreateConversation
+                    ? 'bg-primary text-primary-foreground shadow-[var(--glow-pink)] hover:shadow-[0_0_30px_oklch(0.656_0.241_354.308_/_60%)]'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed',
                   isCollapsed && 'justify-center px-2'
                 )}
               >
@@ -139,7 +148,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </Button>
             </TooltipTrigger>
             <TooltipContent side={isCollapsed ? 'right' : 'bottom'}>
-              <p>Nouvelle conversation (⌘+N)</p>
+              <p>
+                {!activeRepo
+                  ? 'Selectionnez un repository'
+                  : !isIndexed
+                    ? 'Indexation requise'
+                    : isInProgress
+                      ? 'Indexation en cours...'
+                      : 'Nouvelle conversation (⌘+N)'}
+              </p>
             </TooltipContent>
           </Tooltip>
 

@@ -2,6 +2,9 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+import { useActiveRepo } from './useActiveRepo'
+import { useIndexingStatus } from './useIndexingStatus'
 
 /**
  * Hook to handle the ⌘+N (Mac) / Ctrl+N (Windows) keyboard shortcut
@@ -12,6 +15,11 @@ import { useRouter } from 'next/navigation'
  */
 export function useNewConversationShortcut() {
   const router = useRouter()
+  const { data: activeRepo } = useActiveRepo()
+  const { isIndexed, isInProgress } = useIndexingStatus(activeRepo?.id)
+
+  // Can only create new conversation if repo is indexed
+  const canCreateConversation = activeRepo && isIndexed && !isInProgress
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -29,11 +37,23 @@ export function useNewConversationShortcut() {
         }
 
         event.preventDefault()
+
+        if (!canCreateConversation) {
+          if (!activeRepo) {
+            toast.error('Selectionnez un repository')
+          } else if (isInProgress) {
+            toast.error('Indexation en cours...')
+          } else {
+            toast.error('Le repository doit être indexé')
+          }
+          return
+        }
+
         router.push('/chat')
       }
     }
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [router])
+  }, [router, canCreateConversation, activeRepo, isInProgress])
 }

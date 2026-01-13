@@ -13,8 +13,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { ConnectedRepository } from '@/hooks/useConnectRepo'
-import { useIndexingStatus, getStatusLabel } from '@/hooks/useIndexingStatus'
+import { useIndexingStatus, getStatusLabel, getPhaseColor } from '@/hooks/useIndexingStatus'
 import { IndexingBadge } from '@/components/repos/IndexingProgress'
+import { Progress } from '@/components/ui/progress'
 
 /**
  * Format a date to a human-readable relative or absolute string
@@ -92,32 +93,37 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
     )
   }
 
+  // Get phase colors for progress bar
+  const currentPhase = statusData?.currentPhase || 'Initializing'
+  const phaseColor = getPhaseColor(currentPhase)
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            'gap-2 border-border/50 hover:border-pink-500/50 hover:bg-accent',
-            'focus:ring-2 focus:ring-pink-500/50 focus:ring-offset-2 focus:ring-offset-background',
-            className
-          )}
-          aria-label={`Repository actif: ${repo.full_name}`}
-        >
-          <FolderGit2 className="size-4 text-pink-500" />
-          <span className="max-w-[180px] truncate font-medium">
-            {repo.full_name}
-          </span>
-          {!isLoadingStatus && (
-            <IndexingBadge status={status} />
-          )}
-          <span className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-            <GitBranch className="size-3" />
-            {repo.default_branch}
-          </span>
-          <ChevronDown className="size-4 text-muted-foreground" />
-        </Button>
-      </DropdownMenuTrigger>
+    <div className="flex items-center gap-3">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'gap-2 border-border/50 hover:border-pink-500/50 hover:bg-accent',
+              'focus:ring-2 focus:ring-pink-500/50 focus:ring-offset-2 focus:ring-offset-background',
+              className
+            )}
+            aria-label={`Repository actif: ${repo.full_name}`}
+          >
+            <FolderGit2 className="size-4 text-pink-500" />
+            <span className="max-w-[180px] truncate font-medium">
+              {repo.full_name}
+            </span>
+            {!isLoadingStatus && (
+              <IndexingBadge status={status} />
+            )}
+            <span className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+              <GitBranch className="size-3" />
+              {repo.default_branch}
+            </span>
+            <ChevronDown className="size-4 text-muted-foreground" />
+          </Button>
+        </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
         <div className="px-2 py-1.5">
           <p className="text-sm font-medium">{repo.full_name}</p>
@@ -215,5 +221,20 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+
+      {/* Progress bar when indexation is in progress */}
+      {isInProgress && (
+        <div className={cn('flex items-center gap-1.5', phaseColor.text)}>
+          <Progress
+            value={statusData?.progress || 0}
+            className="h-1 w-16"
+            indicatorClassName={phaseColor.bg}
+          />
+          <span className="text-[10px] font-medium tabular-nums">
+            {statusData?.progress || 0}%
+          </span>
+        </div>
+      )}
+    </div>
   )
 }

@@ -64,6 +64,7 @@ export function detectLanguage(filePath: string): string {
     sh: 'shell',
     bash: 'shell',
     zsh: 'shell',
+    dart: 'dart',
   }
 
   return languageMap[ext] || 'text'

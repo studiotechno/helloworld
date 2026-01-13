@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
 import { useQueryClient } from '@tanstack/react-query'
-import { useActiveRepo, useAnalysisLoader } from '@/hooks'
+import { useActiveRepo, useAnalysisLoader, useIndexingStatus } from '@/hooks'
 import {
   ChatContainer,
   ChatInput,
@@ -22,6 +22,7 @@ export default function ChatPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: activeRepo, isLoading: repoLoading } = useActiveRepo()
+  const { isIndexed, isInProgress, isLoading: indexLoading } = useIndexingStatus(activeRepo?.id)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [userScrolled, setUserScrolled] = useState(false)
   const [inputValue, setInputValue] = useState('')
@@ -67,12 +68,18 @@ export default function ChatPage() {
   // Analysis loader state management
   const analysisLoader = useAnalysisLoader(status === 'submitted')
 
-  // Redirect to repos if no active repo
+  // Redirect to repos if no active repo or not indexed
   useEffect(() => {
-    if (!repoLoading && !activeRepo) {
-      router.push('/repos')
+    if (!repoLoading && !indexLoading) {
+      if (!activeRepo) {
+        router.push('/repos')
+      } else if (!isIndexed || isInProgress) {
+        // Repo exists but not indexed - redirect to repos
+        toast.error('Le repository doit être indexé pour démarrer une conversation')
+        router.push('/repos')
+      }
     }
-  }, [activeRepo, repoLoading, router])
+  }, [activeRepo, repoLoading, indexLoading, isIndexed, isInProgress, router])
 
   // Handle status changes: invalidate cache on submit, capture conversationId on completion
   useEffect(() => {
@@ -160,7 +167,7 @@ export default function ChatPage() {
   }, [])
 
   // Loading state
-  if (repoLoading) {
+  if (repoLoading || indexLoading) {
     return (
       <ChatContainer>
         <div className="flex flex-1 items-center justify-center">
@@ -173,8 +180,8 @@ export default function ChatPage() {
     )
   }
 
-  // No repo connected - will redirect
-  if (!activeRepo) {
+  // No repo connected or not indexed - will redirect
+  if (!activeRepo || !isIndexed || isInProgress) {
     return (
       <ChatContainer>
         <div className="flex flex-1 items-center justify-center">

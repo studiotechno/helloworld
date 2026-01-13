@@ -37,7 +37,7 @@ export async function POST() {
       {
         error: {
           code: 'DISCONNECT_FAILED',
-          message: 'Impossible de deconnecter le repository',
+          message: 'Impossible de déconnecter le repository',
         },
       },
       { status: 500 }

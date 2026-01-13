@@ -1,7 +1,14 @@
+import { redirect } from 'next/navigation'
 import { syncUser } from '@/lib/auth/sync-user'
 import { createClient } from '@/lib/supabase/server'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertCircle } from 'lucide-react'
+
+export const metadata = {
+  title: 'Dashboard - Techno',
+  description: 'Votre espace de travail Techno',
+}
 
 interface GitHubUserMetadata {
   user_name?: string
@@ -14,23 +21,37 @@ interface GitHubUserMetadata {
 }
 
 export default async function DashboardPage() {
+  // First check if user is authenticated via Supabase
   const supabase = await createClient()
   const {
     data: { user: authUser },
   } = await supabase.auth.getUser()
 
+  // If not authenticated, redirect to login
+  if (!authUser) {
+    redirect('/login')
+  }
+
   // Try to sync user with Prisma (may fail if DB not configured)
   const prismaUser = await syncUser()
 
   // Use Prisma user if available, otherwise use Supabase auth data
-  const metadata = (authUser?.user_metadata || {}) as GitHubUserMetadata
+  const metadata = authUser.user_metadata as GitHubUserMetadata
   const displayName = prismaUser?.name || metadata.name || metadata.full_name || metadata.user_name || 'Utilisateur'
-  const email = prismaUser?.email || authUser?.email
-  const githubId = prismaUser?.github_id || metadata.provider_id || metadata.sub || authUser?.id
+  const avatarUrl = prismaUser?.avatar_url || metadata.avatar_url
+  const email = prismaUser?.email || authUser.email
+  const githubId = prismaUser?.github_id || metadata.provider_id || metadata.sub || authUser.id
   const createdAt = prismaUser?.created_at || new Date()
 
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U'
+
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="mx-auto max-w-4xl space-y-8">
         {/* Database Warning */}
         {!prismaUser && (
@@ -48,13 +69,21 @@ export default async function DashboardPage() {
         )}
 
         {/* Welcome Header */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Bienvenue, <span className="text-primary">{displayName}</span>
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Votre espace de travail techno
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Bienvenue, <span className="text-primary">{displayName}</span>
+            </h1>
+            <p className="mt-1 text-muted-foreground">
+              Votre espace de travail Techno
+            </p>
+          </div>
+          <Avatar className="size-12 ring-2 ring-primary/20">
+            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
         </div>
 
         {/* User Info Card */}
@@ -91,7 +120,7 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Placeholder for next stories */}
+        {/* Placeholder for next stories
         <Card className="border-dashed border-border/50 bg-transparent">
           <CardHeader>
             <CardTitle className="text-muted-foreground">Prochaines étapes</CardTitle>
@@ -106,7 +135,7 @@ export default async function DashboardPage() {
               <li>Epic 4: Analyse de votre codebase</li>
             </ul>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   )

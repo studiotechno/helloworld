@@ -61,12 +61,12 @@ export function DisconnectRepoDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Unplug className="size-5 text-destructive" />
-            Deconnecter le repository ?
+            Déconnecter le repository ?
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div className="space-y-2 pt-2 text-sm text-muted-foreground">
               <p>
-                Vous allez deconnecter{' '}
+                Vous allez déconnecter{' '}
                 <strong className="text-foreground">{repoName}</strong>.
               </p>
               <p>
@@ -87,10 +87,10 @@ export function DisconnectRepoDialog({
             {isDisconnecting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
-                Deconnexion...
+                Déconnexion...
               </>
             ) : (
-              'Deconnecter'
+              'Déconnecter'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>

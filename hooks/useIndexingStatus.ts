@@ -173,7 +173,7 @@ export function getStatusColor(status: IndexingStatus): string {
     not_started: 'text-muted-foreground',
     pending: 'text-yellow-500',
     fetching: 'text-blue-500',
-    parsing: 'text-blue-500',
+    parsing: 'text-cyan-500',
     embedding: 'text-purple-500',
     completed: 'text-green-500',
     indexed: 'text-green-500',
@@ -181,4 +181,50 @@ export function getStatusColor(status: IndexingStatus): string {
     cancelled: 'text-yellow-500',
   }
   return colors[status] || 'text-muted-foreground'
+}
+
+/**
+ * Phase color configuration for progress bars
+ */
+export const phaseColors: Record<string, { text: string; bg: string; border: string; glow: string }> = {
+  'Fetching files': {
+    text: 'text-blue-500',
+    bg: 'bg-blue-500',
+    border: 'border-blue-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(59,130,246,0.5)]',
+  },
+  'Parsing code': {
+    text: 'text-cyan-500',
+    bg: 'bg-cyan-500',
+    border: 'border-cyan-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(6,182,212,0.5)]',
+  },
+  'Generating context': {
+    text: 'text-amber-500',
+    bg: 'bg-amber-500',
+    border: 'border-amber-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(245,158,11,0.5)]',
+  },
+  'Generating embeddings': {
+    text: 'text-purple-500',
+    bg: 'bg-purple-500',
+    border: 'border-purple-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(168,85,247,0.5)]',
+  },
+  'Finalizing': {
+    text: 'text-green-500',
+    bg: 'bg-green-500',
+    border: 'border-green-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(34,197,94,0.5)]',
+  },
+  'Initializing': {
+    text: 'text-yellow-500',
+    bg: 'bg-yellow-500',
+    border: 'border-yellow-500/30',
+    glow: 'shadow-[0_0_15px_-5px_rgba(234,179,8,0.5)]',
+  },
+}
+
+export function getPhaseColor(phase: string | null | undefined) {
+  return phaseColors[phase || 'Initializing'] || phaseColors['Initializing']
 }

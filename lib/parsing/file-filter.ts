@@ -317,7 +317,7 @@ export function isCodeFile(filePath: string): boolean {
     'typescript', 'javascript', 'python', 'go', 'rust', 'java',
     'kotlin', 'swift', 'ruby', 'php', 'csharp', 'cpp', 'c',
     'vue', 'svelte', 'prisma', 'sql', 'json', 'yaml', 'shell',
-    'markdown'
+    'markdown', 'dart'
   ]
   return codeLanguages.includes(language)
 }
