@@ -46,8 +46,13 @@ vi.mock('@/lib/indexing/pipeline', () => ({
 // Import after mocking
 import { POST, DELETE } from './route'
 
+// Use valid UUIDs for testing
+const TEST_USER_ID = '11111111-1111-1111-1111-111111111111'
+const TEST_REPO_ID = '22222222-2222-2222-2222-222222222222'
+const TEST_JOB_ID = '33333333-3333-3333-3333-333333333333'
+
 const mockUser = {
-  id: 'user-123',
+  id: TEST_USER_ID,
   github_id: '12345',
   email: 'test@example.com',
   name: 'Test User',
@@ -55,8 +60,8 @@ const mockUser = {
 }
 
 const mockRepository = {
-  id: 'repo-456',
-  user_id: 'user-123',
+  id: TEST_REPO_ID,
+  user_id: TEST_USER_ID,
   github_repo_id: '67890',
   full_name: 'owner/repo',
   default_branch: 'main',
@@ -64,8 +69,8 @@ const mockRepository = {
 }
 
 const mockJob = {
-  id: 'job-789',
-  repositoryId: 'repo-456',
+  id: TEST_JOB_ID,
+  repositoryId: TEST_REPO_ID,
   status: 'pending',
   progress: 0,
   filesTotal: 0,
@@ -78,7 +83,7 @@ const mockJob = {
 }
 
 const createRequest = (method: string) =>
-  new Request('http://localhost/api/repos/repo-456/index', { method })
+  new Request(`http://localhost/api/repos/${TEST_REPO_ID}/index`, { method })
 
 describe('POST /api/repos/[repoId]/index', () => {
   beforeEach(() => {
@@ -86,11 +91,22 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockRunIndexationPipeline.mockResolvedValue({ success: true })
   })
 
+  it('should return 400 for invalid UUID format', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/repos/invalid-id/index', { method: 'POST' }),
+      { params: Promise.resolve({ repoId: 'invalid-id' }) }
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error.code).toBe('INVALID_ID')
+  })
+
   it('should return 401 if not authenticated', async () => {
     mockGetCurrentUser.mockResolvedValue(null)
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -102,7 +118,7 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockGetCurrentUser.mockResolvedValue({ ...mockUser, github_token: null })
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -115,7 +131,7 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockFindUnique.mockResolvedValue(null)
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -128,7 +144,7 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockFindUnique.mockResolvedValue({ ...mockRepository, user_id: 'other-user' })
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -143,12 +159,12 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockIsJobInProgress.mockReturnValue(true)
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.jobId).toBe('job-789')
+    expect(data.jobId).toBe(TEST_JOB_ID)
     expect(data.status).toBe('fetching')
     expect(data.progress).toBe(25)
     expect(data.message).toBe('Indexation deja en cours')
@@ -163,7 +179,7 @@ describe('POST /api/repos/[repoId]/index', () => {
     mockStartIndexingJob.mockResolvedValue({ jobId: 'new-job', isNew: true })
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -171,12 +187,12 @@ describe('POST /api/repos/[repoId]/index', () => {
     expect(data.jobId).toBe('new-job')
     expect(data.status).toBe('pending')
     expect(data.message).toBe('Indexation demarree')
-    expect(data.statusUrl).toBe('/api/repos/repo-456/index/status')
-    expect(mockStartIndexingJob).toHaveBeenCalledWith('repo-456')
+    expect(data.statusUrl).toBe(`/api/repos/${TEST_REPO_ID}/index/status`)
+    expect(mockStartIndexingJob).toHaveBeenCalledWith(TEST_REPO_ID)
     expect(mockRunIndexationPipeline).toHaveBeenCalledWith(
       expect.objectContaining({
         accessToken: 'ghp_test_token_123',
-        repositoryId: 'repo-456',
+        repositoryId: TEST_REPO_ID,
         owner: 'owner',
         repo: 'repo',
         branch: 'main',
@@ -192,15 +208,15 @@ describe('POST /api/repos/[repoId]/index', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ ...mockJob, status: 'completed', progress: 100 })
     mockIsJobInProgress.mockReturnValue(false)
-    mockStartIndexingJob.mockResolvedValue({ jobId: 'job-789', isNew: false })
+    mockStartIndexingJob.mockResolvedValue({ jobId: TEST_JOB_ID, isNew: false })
 
     const response = await POST(createRequest('POST'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.jobId).toBe('job-789')
+    expect(data.jobId).toBe(TEST_JOB_ID)
     expect(data.message).toBe('Job existant')
   })
 })
@@ -210,11 +226,22 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     vi.clearAllMocks()
   })
 
+  it('should return 400 for invalid UUID format', async () => {
+    const response = await DELETE(
+      new Request('http://localhost/api/repos/invalid-id/index', { method: 'DELETE' }),
+      { params: Promise.resolve({ repoId: 'invalid-id' }) }
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error.code).toBe('INVALID_ID')
+  })
+
   it('should return 401 if not authenticated', async () => {
     mockGetCurrentUser.mockResolvedValue(null)
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -227,7 +254,7 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     mockFindUnique.mockResolvedValue(null)
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -240,7 +267,7 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     mockFindUnique.mockResolvedValue({ ...mockRepository, user_id: 'other-user' })
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -254,7 +281,7 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     mockGetJobByRepository.mockResolvedValue(null)
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -262,20 +289,21 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     expect(data.error.code).toBe('NOT_FOUND')
   })
 
-  it('should return message if job is not in progress', async () => {
+  it('should return message if job is not in progress (cancelled status)', async () => {
+    // Use 'cancelled' status because 'completed' and 'failed' jobs get deleted
     mockGetCurrentUser.mockResolvedValue(mockUser)
     mockFindUnique.mockResolvedValue(mockRepository)
-    mockGetJobByRepository.mockResolvedValue({ ...mockJob, status: 'completed' })
+    mockGetJobByRepository.mockResolvedValue({ ...mockJob, status: 'cancelled' })
     mockIsJobInProgress.mockReturnValue(false)
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
     expect(response.status).toBe(200)
     expect(data.message).toBe("Le job n'est pas en cours")
-    expect(data.status).toBe('completed')
+    expect(data.status).toBe('cancelled')
     expect(mockCancelJob).not.toHaveBeenCalled()
   })
 
@@ -287,14 +315,14 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     mockCancelJob.mockResolvedValue({ ...mockJob, status: 'cancelled' })
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
     expect(response.status).toBe(200)
     expect(data.message).toBe('Indexation annulee')
     expect(data.status).toBe('cancelled')
-    expect(mockCancelJob).toHaveBeenCalledWith('job-789')
+    expect(mockCancelJob).toHaveBeenCalledWith(TEST_JOB_ID)
   })
 
   it('should return 500 if cancel fails', async () => {
@@ -305,7 +333,7 @@ describe('DELETE /api/repos/[repoId]/index', () => {
     mockCancelJob.mockResolvedValue(null)
 
     const response = await DELETE(createRequest('DELETE'), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 

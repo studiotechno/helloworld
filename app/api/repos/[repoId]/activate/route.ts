@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentUser } from '@/lib/auth/sync-user'
+import { logger } from '@/lib/logger'
+
+const log = logger.api
 
 interface RouteParams {
   params: Promise<{ repoId: string }>
 }
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * POST /api/repos/[repoId]/activate
@@ -13,6 +19,16 @@ interface RouteParams {
  */
 export async function POST(_req: Request, { params }: RouteParams) {
   try {
+    const { repoId } = await params
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(repoId)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_ID', message: 'ID de repository invalide' } },
+        { status: 400 }
+      )
+    }
+
     const user = await getCurrentUser()
 
     if (!user) {
@@ -21,8 +37,6 @@ export async function POST(_req: Request, { params }: RouteParams) {
         { status: 401 }
       )
     }
-
-    const { repoId } = await params
 
     // Verify the repository exists and belongs to the user
     const repository = await prisma.repositories.findFirst({
@@ -59,7 +73,7 @@ export async function POST(_req: Request, { params }: RouteParams) {
 
     return NextResponse.json({ repository: updatedRepo })
   } catch (error) {
-    console.error('[API] Activate repo error:', error)
+    log.error('Activate repo error', { error: error instanceof Error ? error.message : String(error) })
 
     return NextResponse.json(
       {

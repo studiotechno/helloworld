@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentUser } from '@/lib/auth/sync-user'
+import { logger } from '@/lib/logger'
 import { getJobByRepository, getRepositoryIndexStats, isRepositoryIndexed } from '@/lib/indexing'
 import { fetchLatestCommitSha } from '@/lib/github/fetch-repository-files'
+
+const log = logger.api
 
 interface RouteParams {
   params: Promise<{ repoId: string }>
 }
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * GET /api/repos/[repoId]/index/status
@@ -15,6 +21,15 @@ interface RouteParams {
 export async function GET(req: Request, { params }: RouteParams) {
   try {
     const { repoId } = await params
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(repoId)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_ID', message: 'ID de repository invalide' } },
+        { status: 400 }
+      )
+    }
+
     const user = await getCurrentUser()
 
     if (!user) {
@@ -63,7 +78,7 @@ export async function GET(req: Request, { params }: RouteParams) {
           repository.default_branch
         )
       } catch (error) {
-        console.error('[API] Failed to fetch latest commit:', error)
+        log.warn('Failed to fetch latest commit', { error: error instanceof Error ? error.message : String(error) })
         return null
       }
     }
@@ -131,7 +146,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
     return NextResponse.json(response)
   } catch (error) {
-    console.error('[API] Get indexation status error:', error)
+    log.error('Get indexation status error', { error: error instanceof Error ? error.message : String(error) })
 
     return NextResponse.json(
       {

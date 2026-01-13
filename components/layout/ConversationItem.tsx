@@ -80,7 +80,7 @@ export function ConversationItem({
 
   return (
     <>
-      <div className="group w-full">
+      <div className="group relative w-full">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -91,38 +91,10 @@ export function ConversationItem({
                 isActive && 'bg-accent text-accent-foreground'
               )}
             >
-              {/* Emoji / Menu trigger container */}
-              <div className="relative shrink-0 size-5 flex items-center justify-center">
-                {/* Emoji - hidden on hover */}
-                <span className="text-base group-hover:opacity-0 transition-opacity duration-150">
-                  {emoji}
-                </span>
-                {/* 3 dots menu - visible on hover */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      onClick={(e) => e.stopPropagation()}
-                      className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-muted rounded"
-                      aria-label="Options de la conversation"
-                    >
-                      <MoreHorizontal className="size-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="right" className="w-40">
-                    <DropdownMenuItem onClick={handleRenameClick}>
-                      <Pencil className="size-4 mr-2" />
-                      Renommer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={handleDeleteClick}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="size-4 mr-2" />
-                      Supprimer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              {/* Emoji - hidden on hover */}
+              <span className="text-base shrink-0 group-hover:opacity-0 transition-opacity duration-150">
+                {emoji}
+              </span>
               <span className="truncate text-sm">{title}</span>
             </Button>
           </TooltipTrigger>
@@ -130,6 +102,32 @@ export function ConversationItem({
             <p className="break-words">{title}</p>
           </TooltipContent>
         </Tooltip>
+
+        {/* 3 dots menu - positioned absolutely, visible on hover */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-muted rounded"
+              aria-label="Options de la conversation"
+            >
+              <MoreHorizontal className="size-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" side="right" className="w-40">
+            <DropdownMenuItem onClick={handleRenameClick}>
+              <Pencil className="size-4 mr-2" />
+              Renommer
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleDeleteClick}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="size-4 mr-2" />
+              Supprimer
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <RenameConversationDialog

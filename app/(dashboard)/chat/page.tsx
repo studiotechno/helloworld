@@ -27,7 +27,7 @@ export default function ChatPage() {
   const [userScrolled, setUserScrolled] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const [conversationId, setConversationId] = useState<string | null>(null)
-  const previousStatusRef = useRef<string>('')
+  const conversationIdCapturedRef = useRef(false)
   const previousRepoIdRef = useRef<string | undefined>(undefined)
 
   // Reset chat when repo changes
@@ -36,19 +36,47 @@ export default function ChatPage() {
       // Repo changed - reset conversation
       setConversationId(null)
       setInputValue('')
+      conversationIdCapturedRef.current = false
     }
     previousRepoIdRef.current = activeRepo?.id
   }, [activeRepo?.id])
 
+  // Custom fetch that captures conversation ID from response headers
+  const customFetch = useCallback(
+    async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+      const response = await fetch(url, options)
+
+      // Capture conversation ID from headers on first response (for new conversations)
+      if (!conversationIdCapturedRef.current) {
+        const newConversationId = response.headers.get('X-Conversation-Id')
+        if (newConversationId) {
+          conversationIdCapturedRef.current = true
+          setConversationId(newConversationId)
+
+          // Invalidate conversations cache immediately so sidebar updates
+          queryClient.invalidateQueries({ queryKey: ['conversations', activeRepo?.id] })
+
+          // Update URL without causing a page remount
+          window.history.replaceState(null, '', `/chat/${newConversationId}`)
+        }
+      }
+
+      return response
+    },
+    [queryClient, activeRepo?.id]
+  )
+
   // Create chat transport with our API endpoint
   // Include conversationId once we have it (after first message)
+  // Use custom fetch to capture conversation ID from response headers
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
         body: { repoId: activeRepo?.id, conversationId },
+        fetch: customFetch,
       }),
-    [activeRepo?.id, conversationId]
+    [activeRepo?.id, conversationId, customFetch]
   )
 
   // useChat hook from Vercel AI SDK v6

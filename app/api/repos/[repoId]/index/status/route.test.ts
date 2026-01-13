@@ -7,12 +7,14 @@ const {
   mockGetJobByRepository,
   mockGetRepositoryIndexStats,
   mockIsRepositoryIndexed,
+  mockFetchLatestCommitSha,
 } = vi.hoisted(() => ({
   mockGetCurrentUser: vi.fn(),
   mockFindUnique: vi.fn(),
   mockGetJobByRepository: vi.fn(),
   mockGetRepositoryIndexStats: vi.fn(),
   mockIsRepositoryIndexed: vi.fn(),
+  mockFetchLatestCommitSha: vi.fn(),
 }))
 
 // Mock modules
@@ -34,11 +36,20 @@ vi.mock('@/lib/indexing', () => ({
   isRepositoryIndexed: mockIsRepositoryIndexed,
 }))
 
+vi.mock('@/lib/github/fetch-repository-files', () => ({
+  fetchLatestCommitSha: mockFetchLatestCommitSha,
+}))
+
 // Import after mocking
 import { GET } from './route'
 
+// Use valid UUIDs for testing
+const TEST_USER_ID = '11111111-1111-1111-1111-111111111111'
+const TEST_REPO_ID = '22222222-2222-2222-2222-222222222222'
+const TEST_JOB_ID = '33333333-3333-3333-3333-333333333333'
+
 const mockUser = {
-  id: 'user-123',
+  id: TEST_USER_ID,
   github_id: '12345',
   email: 'test@example.com',
   name: 'Test User',
@@ -46,17 +57,20 @@ const mockUser = {
 }
 
 const mockRepository = {
-  id: 'repo-456',
-  user_id: 'user-123',
+  id: TEST_REPO_ID,
+  user_id: TEST_USER_ID,
   github_repo_id: '67890',
   full_name: 'owner/repo',
   default_branch: 'main',
   is_active: true,
+  user: {
+    github_token: 'ghp_test_token_123',
+  },
 }
 
 const mockJob = {
-  id: 'job-789',
-  repositoryId: 'repo-456',
+  id: TEST_JOB_ID,
+  repositoryId: TEST_REPO_ID,
   status: 'pending',
   progress: 0,
   filesTotal: 100,
@@ -76,18 +90,31 @@ const mockStats = {
 }
 
 const createRequest = () =>
-  new Request('http://localhost/api/repos/repo-456/index/status', { method: 'GET' })
+  new Request(`http://localhost/api/repos/${TEST_REPO_ID}/index/status`, { method: 'GET' })
 
 describe('GET /api/repos/[repoId]/index/status', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Default mock for fetchLatestCommitSha
+    mockFetchLatestCommitSha.mockResolvedValue('abc1234567890')
+  })
+
+  it('should return 400 for invalid UUID format', async () => {
+    const response = await GET(
+      new Request('http://localhost/api/repos/invalid-id/index/status', { method: 'GET' }),
+      { params: Promise.resolve({ repoId: 'invalid-id' }) }
+    )
+    const data = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(data.error.code).toBe('INVALID_ID')
   })
 
   it('should return 401 if not authenticated', async () => {
     mockGetCurrentUser.mockResolvedValue(null)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -100,7 +127,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockFindUnique.mockResolvedValue(null)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -113,7 +140,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockFindUnique.mockResolvedValue({ ...mockRepository, user_id: 'other-user' })
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -128,7 +155,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockIsRepositoryIndexed.mockResolvedValue(false)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -145,7 +172,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockGetRepositoryIndexStats.mockResolvedValue(mockStats)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -170,12 +197,12 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockGetJobByRepository.mockResolvedValue(inProgressJob)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.jobId).toBe('job-789')
+    expect(data.jobId).toBe(TEST_JOB_ID)
     expect(data.status).toBe('parsing')
     expect(data.progress).toBe(35)
     expect(data.filesTotal).toBe(100)
@@ -202,7 +229,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockGetRepositoryIndexStats.mockResolvedValue(mockStats)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -229,7 +256,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockGetJobByRepository.mockResolvedValue(failedJob)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 
@@ -253,7 +280,7 @@ describe('GET /api/repos/[repoId]/index/status', () => {
     mockGetJobByRepository.mockResolvedValue(cancelledJob)
 
     const response = await GET(createRequest(), {
-      params: Promise.resolve({ repoId: 'repo-456' }),
+      params: Promise.resolve({ repoId: TEST_REPO_ID }),
     })
     const data = await response.json()
 

@@ -151,76 +151,57 @@ function CodeBlock({
   )
 }
 
+// Shared styles for markdown components
+const styles = {
+  h1: "mb-4 mt-6 border-b border-border/50 pb-2 text-2xl font-bold first:mt-0",
+  h2: "mb-3 mt-6 text-xl font-semibold text-foreground first:mt-0",
+  h3: "mb-2 mt-5 text-lg font-semibold text-foreground first:mt-0",
+  h4: "mb-2 mt-4 text-base font-semibold text-foreground first:mt-0",
+  p: "mb-3 leading-7 last:mb-0 [&:not(:first-child)]:mt-3",
+  ul: "my-4 ml-6 list-disc space-y-2 [&>li]:pl-1",
+  ol: "my-4 ml-6 list-decimal space-y-2 [&>li]:pl-1",
+  li: "leading-7",
+  blockquote: "my-4 border-l-4 border-primary/50 bg-muted/30 py-2 pl-4 pr-2 italic",
+  td: "border-b border-border/30 px-4 py-2",
+}
+
 /**
  * Custom markdown components for better styling
  */
 const markdownComponents = {
   // Headings with better visual hierarchy
   h1: ({ children, ...props }: ComponentPropsWithoutRef<'h1'>) => (
-    <h1
-      className="mb-4 mt-6 border-b border-border/50 pb-2 text-2xl font-bold first:mt-0"
-      {...props}
-    >
-      {children}
-    </h1>
+    <h1 className={styles.h1} {...props}>{children}</h1>
   ),
   h2: ({ children, ...props }: ComponentPropsWithoutRef<'h2'>) => (
-    <h2
-      className="mb-3 mt-6 text-xl font-semibold text-foreground first:mt-0"
-      {...props}
-    >
-      {children}
-    </h2>
+    <h2 className={styles.h2} {...props}>{children}</h2>
   ),
   h3: ({ children, ...props }: ComponentPropsWithoutRef<'h3'>) => (
-    <h3
-      className="mb-2 mt-5 text-lg font-semibold text-foreground first:mt-0"
-      {...props}
-    >
-      {children}
-    </h3>
+    <h3 className={styles.h3} {...props}>{children}</h3>
   ),
   h4: ({ children, ...props }: ComponentPropsWithoutRef<'h4'>) => (
-    <h4
-      className="mb-2 mt-4 text-base font-semibold text-foreground first:mt-0"
-      {...props}
-    >
-      {children}
-    </h4>
+    <h4 className={styles.h4} {...props}>{children}</h4>
   ),
 
   // Paragraphs with better spacing
   p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => (
-    <p className="mb-3 leading-7 last:mb-0 [&:not(:first-child)]:mt-3" {...props}>
-      {children}
-    </p>
+    <p className={styles.p} {...props}>{children}</p>
   ),
 
   // Lists with better styling
   ul: ({ children, ...props }: ComponentPropsWithoutRef<'ul'>) => (
-    <ul className="my-4 ml-6 list-disc space-y-2 [&>li]:pl-1" {...props}>
-      {children}
-    </ul>
+    <ul className={styles.ul} {...props}>{children}</ul>
   ),
   ol: ({ children, ...props }: ComponentPropsWithoutRef<'ol'>) => (
-    <ol className="my-4 ml-6 list-decimal space-y-2 [&>li]:pl-1" {...props}>
-      {children}
-    </ol>
+    <ol className={styles.ol} {...props}>{children}</ol>
   ),
   li: ({ children, ...props }: ComponentPropsWithoutRef<'li'>) => (
-    <li className="leading-7" {...props}>
-      {children}
-    </li>
+    <li className={styles.li} {...props}>{children}</li>
   ),
 
   // Blockquotes
   blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
-    <blockquote
-      className="my-4 border-l-4 border-primary/50 bg-muted/30 py-2 pl-4 pr-2 italic"
-      {...props}
-    >
-      {children}
-    </blockquote>
+    <blockquote className={styles.blockquote} {...props}>{children}</blockquote>
   ),
 
   // Tables
@@ -232,22 +213,15 @@ const markdownComponents = {
     </div>
   ),
   thead: ({ children, ...props }: ComponentPropsWithoutRef<'thead'>) => (
-    <thead className="bg-muted/50" {...props}>
-      {children}
-    </thead>
+    <thead className="bg-muted/50" {...props}>{children}</thead>
   ),
   th: ({ children, ...props }: ComponentPropsWithoutRef<'th'>) => (
-    <th
-      className="border-b border-border/50 px-4 py-2 text-left font-semibold"
-      {...props}
-    >
+    <th className="border-b border-border/50 px-4 py-2 text-left font-semibold" {...props}>
       {children}
     </th>
   ),
   td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => (
-    <td className="border-b border-border/30 px-4 py-2" {...props}>
-      {children}
-    </td>
+    <td className={styles.td} {...props}>{children}</td>
   ),
 
   // Horizontal rule
@@ -270,18 +244,14 @@ const markdownComponents = {
 
   // Strong/Bold
   strong: ({ children, ...props }: ComponentPropsWithoutRef<'strong'>) => (
-    <strong className="font-semibold text-foreground" {...props}>
-      {children}
-    </strong>
+    <strong className="font-semibold text-foreground" {...props}>{children}</strong>
   ),
 
   // Code blocks and inline code
   code: CodeBlock,
 
   // Pre tag (wrapper for code) - just pass through children
-  pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => (
-    <>{children}</>
-  ),
+  pre: ({ children }: ComponentPropsWithoutRef<'pre'>) => <>{children}</>,
 }
 
 /**
@@ -348,34 +318,21 @@ function processChildren(children: React.ReactNode): React.ReactNode {
  */
 function ContentWithCitations({ content }: { content: string }) {
   // Create components that process citations within text
+  // Reuse shared styles to avoid duplication
   const componentsWithCitations = {
     ...markdownComponents,
-    // Override p to process citations
+    // Override components that can contain text with citations
     p: ({ children, ...props }: ComponentPropsWithoutRef<'p'>) => (
-      <p className="mb-3 leading-7 last:mb-0 [&:not(:first-child)]:mt-3" {...props}>
-        {processChildren(children)}
-      </p>
+      <p className={styles.p} {...props}>{processChildren(children)}</p>
     ),
-    // Override li to process citations
     li: ({ children, ...props }: ComponentPropsWithoutRef<'li'>) => (
-      <li className="leading-7" {...props}>
-        {processChildren(children)}
-      </li>
+      <li className={styles.li} {...props}>{processChildren(children)}</li>
     ),
-    // Override td to process citations
     td: ({ children, ...props }: ComponentPropsWithoutRef<'td'>) => (
-      <td className="border-b border-border/30 px-4 py-2" {...props}>
-        {processChildren(children)}
-      </td>
+      <td className={styles.td} {...props}>{processChildren(children)}</td>
     ),
-    // Override blockquote to process citations
     blockquote: ({ children, ...props }: ComponentPropsWithoutRef<'blockquote'>) => (
-      <blockquote
-        className="my-4 border-l-4 border-primary/50 bg-muted/30 py-2 pl-4 pr-2 italic"
-        {...props}
-      >
-        {processChildren(children)}
-      </blockquote>
+      <blockquote className={styles.blockquote} {...props}>{processChildren(children)}</blockquote>
     ),
   }
 

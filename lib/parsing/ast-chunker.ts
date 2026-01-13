@@ -482,7 +482,7 @@ export async function getChunkContext(
 
   // Find the node at the given line
   const targetRow = startLine - 1 // Convert to 0-indexed
-  let node = tree.rootNode.descendantForPosition({ row: targetRow, column: 0 })
+  let node: Parser.SyntaxNode | null = tree.rootNode.descendantForPosition({ row: targetRow, column: 0 })
 
   // Walk up the tree to find parent class/module
   while (node) {
@@ -500,7 +500,8 @@ export async function getChunkContext(
       }
     }
 
-    node = node.parent!
+    // Safe assignment - null parent terminates the loop on next iteration
+    node = node.parent ?? null
   }
 
   tree.delete()

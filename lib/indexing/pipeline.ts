@@ -24,6 +24,7 @@ import {
   initTreeSitter,
 } from '../parsing'
 import { embedCode } from '../embeddings/voyage-client'
+import { logger } from '../logger'
 import {
   markJobStarted,
   markJobCompleted,
@@ -37,6 +38,8 @@ import {
   buildContextualContent,
   type ChunkForContext,
 } from './contextual-generator'
+
+const log = logger.indexing
 
 // Batch sizes for different operations
 const FILE_FETCH_BATCH_SIZE = 10
@@ -301,27 +304,36 @@ export async function runIndexationPipeline(
       }
     }
 
-    // Phase 5: Store in database
+    // Phase 5: Store in database (atomic operation)
+    // We use a two-phase approach to avoid data loss:
+    // 1. Insert all new chunks first (they won't conflict due to UUID PKs)
+    // 2. Delete old chunks only after successful insert
+    // This ensures we never lose data if the process crashes
     onProgress?.('Finalizing', 95, 'Storing chunks in database...')
 
-    // First, delete existing chunks for this repository
-    await prisma.code_chunks.deleteMany({
-      where: { repository_id: repositoryId },
-    })
+    // Generate UUIDs for all new chunks upfront (for tracking)
+    const newChunkIds: string[] = []
 
-    // Insert new chunks in batches
+    // Insert new chunks in batches (without deleting old ones first)
     for (let i = 0; i < allChunks.length; i += DB_INSERT_BATCH_SIZE) {
       const batch = allChunks.slice(i, i + DB_INSERT_BATCH_SIZE)
 
+      // Generate UUIDs for this batch
+      const batchIds = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT gen_random_uuid()::text as id FROM generate_series(1, ${batch.length})
+      `
+
       await prisma.$transaction(
-        batch.map(chunk =>
-          prisma.$executeRaw`
+        batch.map((chunk, idx) => {
+          const chunkId = batchIds[idx].id
+          newChunkIds.push(chunkId)
+          return prisma.$executeRaw`
             INSERT INTO code_chunks (
               id, repository_id, file_path, start_line, end_line,
               content, language, chunk_type, symbol_name, dependencies,
               context, file_hash, embedding, created_at
             ) VALUES (
-              gen_random_uuid(),
+              ${chunkId}::uuid,
               ${repositoryId}::uuid,
               ${chunk.file_path},
               ${chunk.start_line},
@@ -337,10 +349,25 @@ export async function runIndexationPipeline(
               NOW()
             )
           `
-        )
+        })
       )
 
       chunksCreated += batch.length
+    }
+
+    // Now safely delete old chunks (those not in our new batch)
+    // This is safe because we've already inserted all new data
+    if (newChunkIds.length > 0) {
+      await prisma.$executeRaw`
+        DELETE FROM code_chunks
+        WHERE repository_id = ${repositoryId}::uuid
+        AND id NOT IN (SELECT unnest(${newChunkIds}::uuid[]))
+      `
+    } else {
+      // No new chunks - just delete all existing
+      await prisma.code_chunks.deleteMany({
+        where: { repository_id: repositoryId },
+      })
     }
 
     // Mark job as completed
@@ -372,63 +399,24 @@ export async function runIndexationPipeline(
 
 /**
  * Run incremental indexation (only changed files)
+ *
+ * NOTE: True incremental indexation is not yet implemented.
+ * This function currently performs a full re-indexation.
+ * The file_hash column in code_chunks is prepared for future incremental support.
+ *
+ * TODO: Implement true incremental indexation:
+ * 1. Fetch current file SHAs from GitHub
+ * 2. Compare with stored file_hash values
+ * 3. Only re-process files where SHA differs
+ * 4. Delete chunks for removed files
  */
 export async function runIncrementalIndexation(
   options: PipelineOptions
 ): Promise<PipelineResult> {
-  const { accessToken, repositoryId, owner, repo, branch, jobId, onProgress } = options
-
-  try {
-    // Get existing chunks to compare
-    const existingChunks = await prisma.code_chunks.findMany({
-      where: { repository_id: repositoryId },
-      select: { file_path: true, file_hash: true },
-    })
-
-    // Reserved for future incremental indexation implementation
-    const _existingHashes = new Map(
-      existingChunks.map(c => [c.file_path, c.file_hash])
-    )
-
-    // Fetch current repository structure
-    onProgress?.('Fetching files', 0, 'Checking for changes...')
-    const structure = await fetchRepositoryStructure(accessToken, owner, repo, branch)
-
-    // Filter files
-    const filterResult = filterFiles(
-      structure.files.map(f => ({ path: f.path, size: f.size })),
-      {
-        gitignoreContent: structure.gitignore || '',
-        respectGitignore: true,
-      }
-    )
-
-    if (filterResult.isEmpty) {
-      await markJobCompleted(jobId, 0)
-      return {
-        success: true,
-        chunksCreated: 0,
-        filesProcessed: 0,
-        filesTotal: 0,
-      }
-    }
-
-    // For incremental, we'd need to fetch content and compare hashes
-    // For MVP, just run full indexation
-    // TODO: Implement true incremental indexation
-    return runIndexationPipeline(options)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    await markJobFailed(jobId, errorMessage)
-
-    return {
-      success: false,
-      chunksCreated: 0,
-      filesProcessed: 0,
-      filesTotal: 0,
-      error: errorMessage,
-    }
-  }
+  // For now, incremental indexation falls back to full indexation
+  // This is intentional until we implement proper change detection
+  log.info('Incremental indexation not yet implemented, running full indexation')
+  return runIndexationPipeline(options)
 }
 
 /**

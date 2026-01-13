@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentUser } from '@/lib/auth/sync-user'
+import { logger } from '@/lib/logger'
 import {
   startIndexingJob,
   cancelJob,
@@ -9,9 +10,14 @@ import {
 } from '@/lib/indexing'
 import { runIndexationPipeline } from '@/lib/indexing/pipeline'
 
+const log = logger.api
+
 interface RouteParams {
   params: Promise<{ repoId: string }>
 }
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * POST /api/repos/[repoId]/index
@@ -20,6 +26,15 @@ interface RouteParams {
 export async function POST(req: Request, { params }: RouteParams) {
   try {
     const { repoId } = await params
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(repoId)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_ID', message: 'ID de repository invalide' } },
+        { status: 400 }
+      )
+    }
+
     const user = await getCurrentUser()
 
     if (!user) {
@@ -101,10 +116,10 @@ export async function POST(req: Request, { params }: RouteParams) {
       jobId,
       onProgress: async (phase, progress, message) => {
         // Progress updates are handled by the pipeline internally
-        console.log(`[Indexation] ${repoId}: ${phase} - ${progress}% - ${message}`)
+        log.debug(`${phase} - ${progress}%`, { repoId, message })
       },
     }).catch(error => {
-      console.error(`[Indexation] Failed for ${repoId}:`, error)
+      log.error('Indexation failed', { repoId, error: error instanceof Error ? error.message : String(error) })
     })
 
     return NextResponse.json({
@@ -115,7 +130,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       statusUrl: `/api/repos/${repoId}/index/status`,
     })
   } catch (error) {
-    console.error('[API] Start indexation error:', error)
+    log.error('Start indexation error', { error: error instanceof Error ? error.message : String(error) })
 
     return NextResponse.json(
       {
@@ -137,6 +152,15 @@ export async function POST(req: Request, { params }: RouteParams) {
 export async function DELETE(req: Request, { params }: RouteParams) {
   try {
     const { repoId } = await params
+
+    // Validate UUID format
+    if (!UUID_REGEX.test(repoId)) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_ID', message: 'ID de repository invalide' } },
+        { status: 400 }
+      )
+    }
+
     const { searchParams } = new URL(req.url)
     const force = searchParams.get('force') === 'true'
 
@@ -218,7 +242,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       status: existingJob.status,
     })
   } catch (error) {
-    console.error('[API] Delete indexation error:', error)
+    log.error('Delete indexation error', { error: error instanceof Error ? error.message : String(error) })
 
     return NextResponse.json(
       {
