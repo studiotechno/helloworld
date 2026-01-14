@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LogOut, Settings, Loader2 } from 'lucide-react'
+import { LogOut, Settings, Loader2, CreditCard } from 'lucide-react'
 
 interface UserMenuProps {
   user: {
@@ -76,6 +76,13 @@ export function UserMenu({ user }: UserMenuProps) {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => router.push('/account')}
+          className="cursor-pointer rounded-lg"
+        >
+          <CreditCard className="mr-2 size-4" />
+          Compte
+        </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => router.push('/settings')}
           className="cursor-pointer rounded-lg"

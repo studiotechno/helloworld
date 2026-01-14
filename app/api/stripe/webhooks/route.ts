@@ -83,14 +83,32 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const subscription = subscriptionData as Stripe.Subscription
 
   const customerId = session.customer as string
+  const userId = session.metadata?.userId
   const plan = (session.metadata?.plan as 'plus' | 'pro') || 'plus'
   const planConfig = PLANS[plan]
 
-  console.log(`[Webhook] Checkout completed for customer ${customerId}, plan: ${plan}`)
+  if (!userId) {
+    console.error('[Webhook] Missing userId in session metadata')
+    return
+  }
 
-  await prisma.subscriptions.update({
-    where: { stripe_customer_id: customerId },
-    data: {
+  console.log(`[Webhook] Checkout completed for customer ${customerId}, user ${userId}, plan: ${plan}`)
+
+  // Get period dates from subscription (handle both timestamp and Date formats)
+  const sub = subscription as any
+  const periodStart = sub.current_period_start
+    ? new Date(typeof sub.current_period_start === 'number' ? sub.current_period_start * 1000 : sub.current_period_start)
+    : new Date()
+  const periodEnd = sub.current_period_end
+    ? new Date(typeof sub.current_period_end === 'number' ? sub.current_period_end * 1000 : sub.current_period_end)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default to 30 days from now
+
+  // Use upsert to handle both new and existing subscription records
+  await prisma.subscriptions.upsert({
+    where: { user_id: userId },
+    create: {
+      user_id: userId,
+      stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
       stripe_price_id: subscription.items.data[0].price.id,
       plan,
@@ -98,9 +116,22 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       billing_interval: 'month',
       token_limit: planConfig.tokenLimit,
       repo_limit: planConfig.repoLimit,
-      current_period_start: new Date((subscription as any).current_period_start * 1000),
-      current_period_end: new Date((subscription as any).current_period_end * 1000),
-      cancel_at_period_end: (subscription as any).cancel_at_period_end ?? false,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
+    },
+    update: {
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+      stripe_price_id: subscription.items.data[0].price.id,
+      plan,
+      status: 'active',
+      billing_interval: 'month',
+      token_limit: planConfig.tokenLimit,
+      repo_limit: planConfig.repoLimit,
+      current_period_start: periodStart,
+      current_period_end: periodEnd,
+      cancel_at_period_end: sub.cancel_at_period_end ?? false,
     },
   })
 }
@@ -113,6 +144,14 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
   const priceId = subscription.items.data[0].price.id
   const plan = getPlanFromPriceId(priceId)
   const planConfig = PLANS[plan]
+
+  // Get period dates (handle both timestamp and Date formats)
+  const periodStart = subscription.current_period_start
+    ? new Date(typeof subscription.current_period_start === 'number' ? subscription.current_period_start * 1000 : subscription.current_period_start)
+    : new Date()
+  const periodEnd = subscription.current_period_end
+    ? new Date(typeof subscription.current_period_end === 'number' ? subscription.current_period_end * 1000 : subscription.current_period_end)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
   console.log(
     `[Webhook] Subscription ${subscription.id} updated, status: ${subscription.status}, plan: ${plan}`
@@ -128,8 +167,8 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
         billing_interval: 'month',
         token_limit: planConfig.tokenLimit,
         repo_limit: planConfig.repoLimit,
-        current_period_start: new Date(subscription.current_period_start * 1000),
-        current_period_end: new Date(subscription.current_period_end * 1000),
+        current_period_start: periodStart,
+        current_period_end: periodEnd,
         cancel_at_period_end: subscription.cancel_at_period_end ?? false,
       },
     })

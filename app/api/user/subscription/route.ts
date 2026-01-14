@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth/sync-user'
+import { prisma } from '@/lib/db/prisma'
 import { getUserLimits, PLANS, type PlanId } from '@/lib/stripe'
 
 export interface SubscriptionResponse {
@@ -34,14 +35,20 @@ export async function GET() {
       )
     }
 
-    const limits = await getUserLimits(user.id)
+    const [limits, subscription] = await Promise.all([
+      getUserLimits(user.id),
+      prisma.subscriptions.findUnique({
+        where: { user_id: user.id },
+        select: { cancel_at_period_end: true, billing_interval: true },
+      }),
+    ])
     const planConfig = PLANS[limits.plan]
 
     const response: SubscriptionResponse = {
       plan: limits.plan,
       planName: planConfig.name,
       status: limits.status,
-      billingInterval: null, // Will be populated from subscription
+      billingInterval: subscription?.billing_interval ?? null,
       tokenLimit: limits.tokenLimit,
       tokensUsed: limits.tokensUsed,
       tokensRemaining: limits.tokensRemaining,
@@ -50,7 +57,7 @@ export async function GET() {
       reposConnected: limits.reposConnected,
       canConnectMoreRepos: limits.canConnectMoreRepos,
       currentPeriodEnd: limits.currentPeriodEnd?.toISOString() ?? null,
-      cancelAtPeriodEnd: false,
+      cancelAtPeriodEnd: subscription?.cancel_at_period_end ?? false,
     }
 
     return NextResponse.json(response)
