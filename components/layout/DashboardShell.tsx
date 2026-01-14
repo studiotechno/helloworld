@@ -59,7 +59,11 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
             <SheetHeader className="border-b border-border/50 px-4 py-4">
               <SheetTitle className="flex items-center gap-2.5">
                 <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
-                  <span className="text-sm font-bold text-primary">◈</span>
+                  <svg className="size-4 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="6" cy="12" r="4" fill="currentColor" />
+                    <circle cx="18" cy="12" r="4" fill="currentColor" />
+                    <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="2" />
+                  </svg>
                 </div>
                 <span className="font-[family-name:var(--font-geist-mono)] text-lg font-medium tracking-tight">
                   onhcet
