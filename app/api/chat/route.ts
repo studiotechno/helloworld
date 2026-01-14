@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         JSON.stringify({
           error: {
             code: 'TOKEN_LIMIT_REACHED',
-            message: 'Limite de tokens atteinte. Passez a un plan superieur pour continuer.',
+            message: 'Limite de tokens atteinte. Passez à un plan supérieur pour continuer.',
             data: {
               limit: tokenCheck.limit,
               used: tokenCheck.used,
@@ -264,7 +264,7 @@ export async function POST(req: Request) {
       systemPrompt += `\n\n## Note sur l'indexation
 
 Le repository n'est pas encore indexe. Tu ne disposes pas du contexte du code source.
-Reponds du mieux possible en te basant sur les informations generales, et suggere a l'utilisateur de patienter pendant l'indexation.`
+Reponds du mieux possible en te basant sur les informations générales, et suggère à l'utilisateur de patienter pendant l'indexation.`
     } else if (repoId && isIndexed && retrievedChunks.length === 0) {
       // Indexed but no relevant code found for this query
       systemPrompt += `\n\n## Contexte code

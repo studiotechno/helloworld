@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 import { useConversations, useDeleteConversation, useRenameConversation, type Conversation } from '@/hooks/use-conversations'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { useIndexingStatus } from '@/hooks/useIndexingStatus'
-import { useTokenUsage } from '@/hooks/useTokenUsage'
+import { useSubscription } from '@/hooks/useSubscription'
 import { groupConversationsByDate, DATE_GROUP_LABELS, DATE_GROUP_ORDER } from '@/lib/utils/date-groups'
 import { ConversationItem } from './ConversationItem'
 import { DeleteConversationDialog } from './DeleteConversationDialog'
@@ -38,12 +38,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const deleteConversation = useDeleteConversation()
   const renameConversation = useRenameConversation()
   const { isIndexed, isInProgress } = useIndexingStatus(activeRepo?.id)
-  const { data: tokenUsage } = useTokenUsage()
-
-  // Calculate total tokens
-  const totalTokens = tokenUsage
-    ? (tokenUsage.total.input_tokens + tokenUsage.total.output_tokens)
-    : 0
+  const { data: subscription } = useSubscription()
 
   // Can only create new conversation if repo is indexed
   const canCreateConversation = activeRepo && isIndexed && !isInProgress
@@ -246,17 +241,35 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
           </div>
         </ScrollArea>
 
-        {/* Footer with tokens and version */}
+        {/* Footer with usage progress and version */}
         {!isCollapsed && (
           <div className="shrink-0 border-t border-border/50 p-3 space-y-2">
             <button
               onClick={() => router.push('/settings#usage')}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-muted/50 px-3 py-2 transition-colors hover:bg-muted"
+              className="w-full rounded-lg bg-muted/50 px-3 py-2.5 transition-colors hover:bg-muted space-y-2"
             >
-              <span className="font-semibold tabular-nums text-foreground">
-                {totalTokens.toLocaleString('fr-FR')}
-              </span>
-              <span className="text-xs text-muted-foreground">tokens</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{subscription?.planName || 'Free'}</span>
+                <span className={cn(
+                  "font-medium tabular-nums",
+                  (subscription?.tokenUsagePercent || 0) >= 100 ? 'text-red-500' :
+                  (subscription?.tokenUsagePercent || 0) >= 80 ? 'text-yellow-500' :
+                  'text-foreground'
+                )}>
+                  {subscription?.tokenUsagePercent || 0}%
+                </span>
+              </div>
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted-foreground/20">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all duration-300",
+                    (subscription?.tokenUsagePercent || 0) >= 100 ? 'bg-red-500' :
+                    (subscription?.tokenUsagePercent || 0) >= 80 ? 'bg-yellow-500' :
+                    'bg-primary'
+                  )}
+                  style={{ width: `${Math.min(subscription?.tokenUsagePercent || 0, 100)}%` }}
+                />
+              </div>
             </button>
             <p className="text-center text-[10px] text-muted-foreground/50">
               v{APP_VERSION}

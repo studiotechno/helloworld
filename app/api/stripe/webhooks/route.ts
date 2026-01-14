@@ -83,7 +83,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const subscription = subscriptionData as Stripe.Subscription
 
   const customerId = session.customer as string
-  const plan = (session.metadata?.plan as 'pro' | 'business') || 'pro'
+  const plan = (session.metadata?.plan as 'plus' | 'pro') || 'plus'
   const planConfig = PLANS[plan]
 
   console.log(`[Webhook] Checkout completed for customer ${customerId}, plan: ${plan}`)
@@ -95,9 +95,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripe_price_id: subscription.items.data[0].price.id,
       plan,
       status: 'active',
-      billing_interval: subscription.items.data[0].price.recurring?.interval as
-        | 'month'
-        | 'year',
+      billing_interval: 'month',
       token_limit: planConfig.tokenLimit,
       repo_limit: planConfig.repoLimit,
       current_period_start: new Date((subscription as any).current_period_start * 1000),
@@ -127,9 +125,7 @@ async function handleSubscriptionUpdated(sub: Stripe.Subscription) {
         stripe_price_id: priceId,
         plan,
         status: subscription.status,
-        billing_interval: subscription.items.data[0].price.recurring?.interval as
-          | 'month'
-          | 'year',
+        billing_interval: 'month',
         token_limit: planConfig.tokenLimit,
         repo_limit: planConfig.repoLimit,
         current_period_start: new Date(subscription.current_period_start * 1000),

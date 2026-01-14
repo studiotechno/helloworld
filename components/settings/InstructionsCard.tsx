@@ -9,9 +9,9 @@ import { UserCog, Users, Check, Loader2 } from 'lucide-react'
 import { useUserInstructions, useUpdateUserInstructions } from '@/hooks/useUserInstructions'
 import { useDebouncedCallback } from 'use-debounce'
 
-const PROFILE_PLACEHOLDER = `Ex: Je suis PM senior avec 5 ans d'experience. Je suis a l'aise avec GitHub et les concepts techniques. Je prefere des explications detaillees et techniques plutot que vulgarisees. Je connais bien l'architecture logicielle et les methodologies agile.`
+const PROFILE_PLACEHOLDER = `Ex: Je suis PM senior avec 5 ans d'expérience. Je suis à l'aise avec GitHub et les concepts techniques. Je préfère des explications détaillées et techniques plutôt que vulgarisées. Je connais bien l'architecture logicielle et les méthodologies agile.`
 
-const TEAM_PLACEHOLDER = `Ex: Mon equipe compte 6 personnes : 2 devs backend (Node.js/Python), 2 devs frontend (React/TypeScript), 1 fullstack et 1 designer UI/UX. On travaille en sprints de 2 semaines avec des estimations en story points. On fait des daily standups et des retros. Pas de freelances actuellement.`
+const TEAM_PLACEHOLDER = `Ex: Mon équipe compte 6 personnes : 2 devs backend (Node.js/Python), 2 devs frontend (React/TypeScript), 1 fullstack et 1 designer UI/UX. On travaille en sprints de 2 semaines avec des estimations en story points. On fait des daily standups et des rétros. Pas de freelances actuellement.`
 
 export function InstructionsCard() {
   const { data: instructions, isLoading } = useUserInstructions()

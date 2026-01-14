@@ -277,7 +277,7 @@ export default function ConversationPage({ params }: ConversationPageProps) {
       <ChatContainer>
         <div className="flex flex-1 items-center justify-center">
           <p className="text-muted-foreground">
-            Redirection vers la selection de repository...
+            Redirection vers la sélection de repository...
           </p>
         </div>
       </ChatContainer>

@@ -65,9 +65,9 @@ const POLL_INTERVAL = 2000 // 2 seconds
 
 // Phase icons and labels
 const phaseConfig: Record<string, { icon: typeof Loader2; label: string }> = {
-  'Fetching files': { icon: Download, label: 'Recuperation des fichiers' },
+  'Fetching files': { icon: Download, label: 'Récupération des fichiers' },
   'Parsing code': { icon: FileCode, label: 'Analyse du code' },
-  'Generating embeddings': { icon: Cpu, label: 'Generation des embeddings' },
+  'Generating embeddings': { icon: Cpu, label: 'Génération des embeddings' },
   'Finalizing': { icon: Database, label: 'Finalisation' },
   'Initializing': { icon: Loader2, label: 'Initialisation' },
 }
@@ -88,7 +88,7 @@ export function IndexingProgress({
       const response = await fetch(`/api/repos/${repositoryId}/index/status`)
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la recuperation du statut')
+        throw new Error('Erreur lors de la récupération du statut')
       }
 
       const data: IndexingStatusData = await response.json()
@@ -127,7 +127,7 @@ export function IndexingProgress({
       })
 
       if (!response.ok) {
-        throw new Error('Erreur lors du demarrage de l\'indexation')
+        throw new Error('Erreur lors du démarrage de l\'indexation')
       }
 
       onStartIndexing?.()
@@ -184,11 +184,11 @@ export function IndexingProgress({
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Database className="h-4 w-4" />
-          <span className="text-sm">Repository non indexe</span>
+          <span className="text-sm">Repository non indexé</span>
         </div>
         <Button onClick={handleStartIndexing} size="sm">
           <Database className="h-4 w-4 mr-2" />
-          Demarrer l&apos;indexation
+          Démarrer l&apos;indexation
         </Button>
       </div>
     )
@@ -200,7 +200,7 @@ export function IndexingProgress({
       return (
         <div className={cn('flex items-center gap-1.5', className)}>
           <CheckCircle2 className="h-4 w-4 text-green-500" />
-          <span className="text-xs font-medium text-green-500">Indexe</span>
+          <span className="text-xs font-medium text-green-500">Indexé</span>
         </div>
       )
     }
@@ -209,7 +209,7 @@ export function IndexingProgress({
       <div className={cn('space-y-2', className)}>
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 text-green-500" />
-          <span className="font-medium text-green-500">Indexation terminee</span>
+          <span className="font-medium text-green-500">Indexation terminée</span>
         </div>
         {status.stats && (
           <div className="text-sm text-muted-foreground space-y-1">
@@ -223,7 +223,7 @@ export function IndexingProgress({
         )}
         <Button variant="outline" size="sm" onClick={handleRetry}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Re-indexer
+          Ré-indexer
         </Button>
       </div>
     )
@@ -235,7 +235,7 @@ export function IndexingProgress({
       return (
         <div className={cn('flex items-center gap-1.5', className)}>
           <XCircle className="h-4 w-4 text-destructive" />
-          <span className="text-xs font-medium text-destructive">Echec</span>
+          <span className="text-xs font-medium text-destructive">Échec</span>
         </div>
       )
     }
@@ -244,14 +244,14 @@ export function IndexingProgress({
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center gap-2 text-destructive">
           <XCircle className="h-5 w-5" />
-          <span className="font-medium">Indexation echouee</span>
+          <span className="font-medium">Indexation échouée</span>
         </div>
         {status.error && (
           <p className="text-sm text-muted-foreground">{status.error}</p>
         )}
         <Button variant="outline" size="sm" onClick={handleRetry}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Reessayer
+          Réessayer
         </Button>
       </div>
     )
@@ -263,7 +263,7 @@ export function IndexingProgress({
       return (
         <div className={cn('flex items-center gap-1.5', className)}>
           <AlertCircle className="h-4 w-4 text-yellow-500" />
-          <span className="text-xs font-medium text-yellow-500">Annule</span>
+          <span className="text-xs font-medium text-yellow-500">Annulé</span>
         </div>
       )
     }
@@ -272,7 +272,7 @@ export function IndexingProgress({
       <div className={cn('space-y-3', className)}>
         <div className="flex items-center gap-2 text-yellow-500">
           <AlertCircle className="h-5 w-5" />
-          <span className="font-medium">Indexation annulee</span>
+          <span className="font-medium">Indexation annulée</span>
         </div>
         <Button variant="outline" size="sm" onClick={handleRetry}>
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -321,7 +321,7 @@ export function IndexingProgress({
       {/* Additional info */}
       {status.chunksCreated !== undefined && status.chunksCreated > 0 && (
         <p className="text-xs text-muted-foreground">
-          {status.chunksCreated} sections creees
+          {status.chunksCreated} sections créées
         </p>
       )}
     </div>
@@ -337,15 +337,15 @@ export function IndexingBadge({
   className?: string
 }) {
   const config: Record<IndexingStatus, { icon: typeof CheckCircle2; label: string; color: string }> = {
-    not_started: { icon: Database, label: 'Non indexe', color: 'text-muted-foreground' },
+    not_started: { icon: Database, label: 'Non indexé', color: 'text-muted-foreground' },
     pending: { icon: Loader2, label: 'En attente', color: 'text-yellow-500' },
-    fetching: { icon: Download, label: 'Telechargement', color: 'text-blue-500' },
+    fetching: { icon: Download, label: 'Téléchargement', color: 'text-blue-500' },
     parsing: { icon: FileCode, label: 'Analyse', color: 'text-blue-500' },
     embedding: { icon: Cpu, label: 'Embeddings', color: 'text-purple-500' },
-    completed: { icon: CheckCircle2, label: 'Indexe', color: 'text-green-500' },
-    indexed: { icon: CheckCircle2, label: 'Indexe', color: 'text-green-500' },
-    failed: { icon: XCircle, label: 'Echec', color: 'text-destructive' },
-    cancelled: { icon: AlertCircle, label: 'Annule', color: 'text-yellow-500' },
+    completed: { icon: CheckCircle2, label: 'Indexé', color: 'text-green-500' },
+    indexed: { icon: CheckCircle2, label: 'Indexé', color: 'text-green-500' },
+    failed: { icon: XCircle, label: 'Échec', color: 'text-destructive' },
+    cancelled: { icon: AlertCircle, label: 'Annulé', color: 'text-yellow-500' },
   }
 
   const { icon: Icon, label, color } = config[status]

@@ -45,7 +45,7 @@ export async function POST() {
       {
         error: {
           code: 'PORTAL_FAILED',
-          message: 'Erreur lors de la creation du portail',
+          message: 'Erreur lors de la création du portail',
         },
       },
       { status: 500 }

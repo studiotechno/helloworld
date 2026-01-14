@@ -1,27 +1,23 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Check, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { type PlanConfig, type BillingInterval, formatPrice, getMonthlyFromYearly } from '@/lib/stripe'
+import { type PlanConfig, formatPrice } from '@/lib/stripe'
 
 interface PricingCardProps {
   plan: PlanConfig
-  interval: BillingInterval
   currentPlan?: string
   isLoading?: boolean
 }
 
-export function PricingCard({ plan, interval, currentPlan, isLoading }: PricingCardProps) {
-  const router = useRouter()
+export function PricingCard({ plan, currentPlan, isLoading }: PricingCardProps) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
 
   const isCurrentPlan = currentPlan === plan.id
   const isFree = plan.id === 'free'
-  const price = interval === 'month' ? plan.priceMonthly : getMonthlyFromYearly(plan.priceYearly)
 
   const handleSubscribe = async () => {
     if (isFree || isCurrentPlan) return
@@ -31,7 +27,7 @@ export function PricingCard({ plan, interval, currentPlan, isLoading }: PricingC
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: plan.id, interval }),
+        body: JSON.stringify({ plan: plan.id }),
       })
 
       const data = await response.json()
@@ -79,17 +75,10 @@ export function PricingCard({ plan, interval, currentPlan, isLoading }: PricingC
           {isFree ? (
             <div className="text-4xl font-bold">Gratuit</div>
           ) : (
-            <>
-              <div className="text-4xl font-bold">
-                {formatPrice(price)}
-                <span className="text-lg font-normal text-muted-foreground">/mois</span>
-              </div>
-              {interval === 'year' && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Facture {formatPrice(plan.priceYearly)} par an
-                </p>
-              )}
-            </>
+            <div className="text-4xl font-bold">
+              {formatPrice(plan.price)}
+              <span className="text-lg font-normal text-muted-foreground">/mois</span>
+            </div>
           )}
         </div>
 

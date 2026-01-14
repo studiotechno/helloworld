@@ -61,7 +61,7 @@ export function SizeWarningDialog({
           </div>
           <p className="mt-3 text-muted-foreground">
             Les analyses sur ce repository peuvent prendre plus de temps et les
-            performances peuvent etre affectees.
+            performances peuvent être affectées.
           </p>
         </div>
 
@@ -70,7 +70,7 @@ export function SizeWarningDialog({
             Annuler
           </Button>
           <Button onClick={onConfirm} disabled={isLoading}>
-            {isLoading ? 'Connexion...' : 'Continuer quand meme'}
+            {isLoading ? 'Connexion...' : 'Continuer quand même'}
           </Button>
         </DialogFooter>
       </DialogContent>

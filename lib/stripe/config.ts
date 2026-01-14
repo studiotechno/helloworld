@@ -4,8 +4,7 @@
  * Defines the pricing tiers, limits, and Stripe price IDs for each plan.
  */
 
-export type PlanId = 'free' | 'pro' | 'business'
-export type BillingInterval = 'month' | 'year'
+export type PlanId = 'free' | 'plus' | 'pro'
 
 export interface PlanConfig {
   id: PlanId
@@ -13,10 +12,8 @@ export interface PlanConfig {
   description: string
   tokenLimit: number
   repoLimit: number // -1 = unlimited
-  priceMonthly: number // in EUR
-  priceYearly: number // in EUR (total for year)
-  stripePriceIdMonthly?: string
-  stripePriceIdYearly?: string
+  price: number // in EUR per month
+  stripePriceId?: string
   features: string[]
   highlighted?: boolean
 }
@@ -28,45 +25,40 @@ export const PLANS: Record<PlanId, PlanConfig> = {
     description: 'Pour decouvrir la plateforme',
     tokenLimit: 40_000,
     repoLimit: 1,
-    priceMonthly: 0,
-    priceYearly: 0,
+    price: 0,
     features: [
-      '40 000 tokens/mois',
+      '40K tokens/mois',
       '1 repository',
       'Chat illimite',
       'Indexation de code',
     ],
   },
-  pro: {
-    id: 'pro',
-    name: 'Pro',
+  plus: {
+    id: 'plus',
+    name: 'Plus',
     description: 'Pour les developpeurs actifs',
     tokenLimit: 1_000_000,
     repoLimit: 5,
-    priceMonthly: 19,
-    priceYearly: 182.4, // 15.20€/mois
-    stripePriceIdMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
-    stripePriceIdYearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+    price: 19,
+    stripePriceId: process.env.STRIPE_PRICE_PLUS,
     features: [
-      '1 000 000 tokens/mois',
+      '1M tokens/mois',
       '5 repositories',
       'Support prioritaire',
       'Historique complet',
     ],
     highlighted: true,
   },
-  business: {
-    id: 'business',
-    name: 'Business',
+  pro: {
+    id: 'pro',
+    name: 'Pro',
     description: 'Pour les equipes et projets ambitieux',
     tokenLimit: 4_000_000,
     repoLimit: -1, // unlimited
-    priceMonthly: 60,
-    priceYearly: 576, // 48€/mois
-    stripePriceIdMonthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
-    stripePriceIdYearly: process.env.STRIPE_PRICE_BUSINESS_YEARLY,
+    price: 60,
+    stripePriceId: process.env.STRIPE_PRICE_PRO,
     features: [
-      '4 000 000 tokens/mois',
+      '4M tokens/mois',
       'Repositories illimites',
       'Support dedie',
       'API access',
@@ -82,14 +74,10 @@ export function getPlan(planId: PlanId): PlanConfig {
 }
 
 /**
- * Get Stripe price ID for a plan and interval
+ * Get Stripe price ID for a plan
  */
-export function getStripePriceId(
-  planId: PlanId,
-  interval: BillingInterval
-): string | undefined {
-  const plan = PLANS[planId]
-  return interval === 'month' ? plan.stripePriceIdMonthly : plan.stripePriceIdYearly
+export function getStripePriceId(planId: PlanId): string | undefined {
+  return PLANS[planId].stripePriceId
 }
 
 /**
@@ -97,10 +85,7 @@ export function getStripePriceId(
  */
 export function getPlanFromPriceId(priceId: string): PlanId {
   for (const [planId, config] of Object.entries(PLANS)) {
-    if (
-      config.stripePriceIdMonthly === priceId ||
-      config.stripePriceIdYearly === priceId
-    ) {
+    if (config.stripePriceId === priceId) {
       return planId as PlanId
     }
   }
@@ -110,34 +95,13 @@ export function getPlanFromPriceId(priceId: string): PlanId {
 /**
  * Format price for display
  */
-export function formatPrice(amount: number, interval?: BillingInterval): string {
+export function formatPrice(amount: number): string {
   if (amount === 0) return 'Gratuit'
 
-  const formatted = new Intl.NumberFormat('fr-FR', {
+  return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   }).format(amount)
-
-  if (interval === 'year') {
-    return `${formatted}/an`
-  }
-  return `${formatted}/mois`
-}
-
-/**
- * Calculate monthly price from yearly
- */
-export function getMonthlyFromYearly(yearlyPrice: number): number {
-  return Math.round((yearlyPrice / 12) * 100) / 100
-}
-
-/**
- * Calculate savings percentage for annual billing
- */
-export function getAnnualSavings(monthlyPrice: number, yearlyPrice: number): number {
-  if (monthlyPrice === 0) return 0
-  const monthlyTotal = monthlyPrice * 12
-  return Math.round(((monthlyTotal - yearlyPrice) / monthlyTotal) * 100)
 }

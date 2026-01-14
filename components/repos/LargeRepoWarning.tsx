@@ -182,7 +182,7 @@ export function LargeRepoWarning({
               </div>
 
               <p className="text-sm text-muted-foreground">
-                Vous pouvez commencer a utiliser le chat pendant l&apos;indexation, mais les reponses
+                Vous pouvez commencer à utiliser le chat pendant l&apos;indexation, mais les réponses
                 seront limitees jusqu&apos;a la fin du processus.
               </p>
             </div>

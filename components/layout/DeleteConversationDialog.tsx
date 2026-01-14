@@ -40,7 +40,7 @@ export function DeleteConversationDialog({
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Echec de la suppression. Veuillez reessayer.'
+          : 'Échec de la suppression. Veuillez réessayer.'
       )
     } finally {
       setIsDeleting(false)

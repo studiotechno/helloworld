@@ -53,7 +53,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
             Connectez votre repository
           </h2>
           <p className="mx-auto max-w-md text-muted-foreground">
-            Pour commencer, selectionnez un repository GitHub a analyser.
+            Pour commencer, sélectionnez un repository GitHub à analyser.
           </p>
         </div>
 
@@ -203,7 +203,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
         </h2>
         <p className="mx-auto max-w-md text-muted-foreground">
           Interrogez votre codebase en langage naturel. Je suis la pour vous
-          aider a comprendre votre code.
+          aider à comprendre votre code.
         </p>
       </div>
 

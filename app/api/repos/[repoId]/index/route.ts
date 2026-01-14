@@ -41,6 +41,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       return NextResponse.json(
         { error: { code: 'UNAUTHORIZED', message: 'Non authentifié' } },
         { status: 401 }
+      )
     }
 
     if (!user.github_token) {

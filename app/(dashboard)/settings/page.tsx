@@ -7,13 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertTriangle, User, Mail, Github, Calendar, FolderGit2, GitBranch, Unplug } from 'lucide-react'
+import { AlertTriangle, User, Mail, Github, Calendar, FolderGit2, GitBranch, Unplug, Crown } from 'lucide-react'
 import { DeleteAccountDialog } from '@/components/settings/DeleteAccountDialog'
 import { InstructionsCard } from '@/components/settings/InstructionsCard'
 import { UsageCard } from '@/components/settings/UsageCard'
 import { DisconnectRepoDialog } from '@/components/repos/DisconnectRepoDialog'
 import { TechTags } from '@/components/layout/TechTags'
 import { useActiveRepo, useRepoTechnologies, useDisconnectRepo } from '@/hooks'
+import { useSubscription } from '@/hooks/useSubscription'
+import { cn } from '@/lib/utils'
 
 interface UserProfile {
   name: string
@@ -33,6 +35,9 @@ export default function SettingsPage() {
   const { data: activeRepo, isLoading: repoLoading } = useActiveRepo()
   const { data: technologies } = useRepoTechnologies(!!activeRepo)
   const disconnectMutation = useDisconnectRepo()
+
+  // Subscription hook
+  const { data: subscription } = useSubscription()
 
   useEffect(() => {
     async function loadUser() {
@@ -107,7 +112,7 @@ export default function SettingsPage() {
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Profil</CardTitle>
-            <CardDescription>Informations de votre compte GitHub</CardDescription>
+            <CardDescription>Informations de votre compte</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Avatar and Name */}
@@ -163,6 +168,19 @@ export default function SettingsPage() {
                       year: 'numeric',
                     })}
                   </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Crown className={cn(
+                  "size-4",
+                  subscription?.plan === 'pro' ? 'text-yellow-500' :
+                  subscription?.plan === 'plus' ? 'text-primary' :
+                  'text-muted-foreground'
+                )} />
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Abonnement</p>
+                  <p className="text-foreground">{subscription?.planName || 'Free'}</p>
                 </div>
               </div>
             </div>

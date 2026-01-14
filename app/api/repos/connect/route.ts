@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         {
           error: {
             code: 'REPO_LIMIT_REACHED',
-            message: 'Limite de repositories atteinte. Passez a un plan superieur.',
+            message: 'Limite de repositories atteinte. Passez à un plan supérieur.',
             data: {
               current: repoCheck.current,
               limit: repoCheck.limit,
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         ? {
             code: 'SIZE_WARNING',
             message:
-              'Ce repository depasse la limite recommandee pour le MVP (environ 10 000 lignes de code). Les performances peuvent etre affectees.',
+              'Ce repository dépasse la limite recommandée pour le MVP (environ 10 000 lignes de code). Les performances peuvent être affectées.',
           }
         : null,
     })

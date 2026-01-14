@@ -123,7 +123,7 @@ export async function PUT(request: Request) {
       {
         error: {
           code: 'UPDATE_FAILED',
-          message: 'Impossible de mettre a jour les instructions',
+          message: 'Impossible de mettre à jour les instructions',
         },
       },
       { status: 500 }

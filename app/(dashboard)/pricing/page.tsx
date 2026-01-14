@@ -27,7 +27,7 @@ export default function PricingPage() {
           Choisissez votre plan
         </h1>
         <p className="text-lg text-muted-foreground">
-          Commencez gratuitement, puis passez a un plan superieur selon vos besoins.
+          Commencez gratuitement, puis passez à un plan supérieur selon vos besoins.
         </p>
 
         {checkout === 'canceled' && (
@@ -59,9 +59,9 @@ export default function PricingPage() {
 
         <div className="space-y-6">
           <div className="border border-border/50 rounded-lg p-6">
-            <h3 className="font-semibold mb-2">Puis-je changer de plan a tout moment ?</h3>
+            <h3 className="font-semibold mb-2">Puis-je changer de plan à tout moment ?</h3>
             <p className="text-muted-foreground">
-              Oui, vous pouvez passer a un plan superieur ou inferieur a tout moment.
+              Oui, vous pouvez passer à un plan supérieur ou inférieur à tout moment.
               Les changements prennent effet immediatement.
             </p>
           </div>
@@ -70,15 +70,15 @@ export default function PricingPage() {
             <h3 className="font-semibold mb-2">Que se passe-t-il si j&apos;atteins ma limite de tokens ?</h3>
             <p className="text-muted-foreground">
               Vous ne pourrez plus utiliser le chat jusqu&apos;a la prochaine periode de facturation,
-              ou vous pouvez passer a un plan superieur pour continuer.
+              ou vous pouvez passer à un plan supérieur pour continuer.
             </p>
           </div>
 
           <div className="border border-border/50 rounded-lg p-6">
             <h3 className="font-semibold mb-2">Puis-je annuler mon abonnement ?</h3>
             <p className="text-muted-foreground">
-              Oui, vous pouvez annuler a tout moment depuis vos parametres.
-              Vous conserverez l&apos;acces jusqu&apos;a la fin de votre periode de facturation.
+              Oui, vous pouvez annuler à tout moment depuis vos paramètres.
+              Vous conserverez l&apos;accès jusqu&apos;à la fin de votre période de facturation.
             </p>
           </div>
         </div>

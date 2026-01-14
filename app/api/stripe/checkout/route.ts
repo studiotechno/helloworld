@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { prisma } from '@/lib/db/prisma'
-import { stripe, getStripePriceId, PLANS, type PlanId, type BillingInterval } from '@/lib/stripe'
+import { stripe, getStripePriceId, PLANS, type PlanId } from '@/lib/stripe'
 
 const checkoutSchema = z.object({
-  plan: z.enum(['pro', 'business']),
-  interval: z.enum(['month', 'year']),
+  plan: z.enum(['plus', 'pro']),
 })
 
 /**
@@ -30,12 +29,12 @@ export async function POST(req: Request) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: { code: 'INVALID_REQUEST', message: 'Plan ou interval invalide' } },
+        { error: { code: 'INVALID_REQUEST', message: 'Plan invalide' } },
         { status: 400 }
       )
     }
 
-    const { plan, interval } = parseResult.data
+    const { plan } = parseResult.data
 
     // Get or create Stripe customer
     let subscription = await prisma.subscriptions.findUnique({
@@ -70,7 +69,7 @@ export async function POST(req: Request) {
     }
 
     // Get Stripe price ID
-    const priceId = getStripePriceId(plan as PlanId, interval as BillingInterval)
+    const priceId = getStripePriceId(plan as PlanId)
 
     if (!priceId) {
       return NextResponse.json(
@@ -95,7 +94,6 @@ export async function POST(req: Request) {
       metadata: {
         userId: user.id,
         plan,
-        interval,
       },
       subscription_data: {
         metadata: {
@@ -115,7 +113,7 @@ export async function POST(req: Request) {
       {
         error: {
           code: 'CHECKOUT_FAILED',
-          message: 'Erreur lors de la creation du checkout',
+          message: 'Erreur lors de la création du checkout',
         },
       },
       { status: 500 }

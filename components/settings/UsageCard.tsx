@@ -78,7 +78,7 @@ export function UsageCard() {
           <div className="flex items-center gap-2">
             <Crown className={cn(
               "size-4",
-              plan === 'business' ? 'text-yellow-500' : plan === 'pro' ? 'text-primary' : 'text-muted-foreground'
+              plan === 'pro' ? 'text-yellow-500' : plan === 'plus' ? 'text-primary' : 'text-muted-foreground'
             )} />
             <span className="text-sm font-medium">{planName}</span>
           </div>
@@ -176,9 +176,9 @@ export function UsageCard() {
         {plan === 'free' && !isLimitReached && (
           <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4 text-center">
             <Crown className="mx-auto size-8 text-primary mb-2" />
-            <p className="font-medium">Passez à Pro</p>
+            <p className="font-medium">Passez à Plus</p>
             <p className="text-sm text-muted-foreground mb-3">
-              1M tokens/mois et 5 repositories pour 19EUR/mois
+              1M tokens/mois et 5 repositories pour 19€/mois
             </p>
             <Button onClick={() => router.push('/pricing')}>
               Voir les plans

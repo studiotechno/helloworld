@@ -77,7 +77,7 @@ export async function PATCH(req: Request, { params }: RouteParams) {
   } catch (error) {
     console.error('[API] Update conversation error:', error)
     return NextResponse.json(
-      { error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de la mise a jour de la conversation' } },
+      { error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de la mise à jour de la conversation' } },
       { status: 500 }
     )
   }

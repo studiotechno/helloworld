@@ -65,11 +65,12 @@ export async function getUserLimits(userId: string): Promise<UsageLimits> {
     subscription?.current_period_start ??
     new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 
-  // Get token usage for current period
+  // Get token usage for current period (chat only, exclude indexing)
   const tokenUsage = await prisma.token_usage.aggregate({
     where: {
       user_id: userId,
       created_at: { gte: periodStart },
+      type: 'chat',
     },
     _sum: {
       input_tokens: true,

@@ -57,7 +57,7 @@ describe('IndexingProgress', () => {
 
   describe('loading state', () => {
     it('should show loading indicator initially', () => {
-      mockFetch.mockImplementation(() => new Promise(() => {})) // Never resolves
+      mockFetch.mockImplementation(() => new Promise(() => { })) // Never resolves
 
       render(<IndexingProgress repositoryId="repo-123" />)
 
@@ -347,7 +347,7 @@ describe('IndexingProgress', () => {
       render(<IndexingProgress repositoryId="repo-123" compact />)
 
       await waitFor(() => {
-        expect(screen.getByText('Echec')).toBeInTheDocument()
+        expect(screen.getByText('Échec')).toBeInTheDocument()
       })
     })
   })

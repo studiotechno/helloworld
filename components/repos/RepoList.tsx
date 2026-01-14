@@ -46,7 +46,7 @@ function EmptyState({ hasSearch }: { hasSearch: boolean }) {
             Aucun resultat
           </h3>
           <p className="text-sm text-muted-foreground max-w-sm">
-            Aucun repository ne correspond a votre recherche. Essayez avec d&apos;autres termes.
+            Aucun repository ne correspond à votre recherche. Essayez avec d&apos;autres termes.
           </p>
         </>
       ) : (

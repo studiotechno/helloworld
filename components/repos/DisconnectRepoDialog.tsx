@@ -43,7 +43,7 @@ export function DisconnectRepoDialog({
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Echec de la deconnexion. Veuillez reessayer.'
+          : 'Échec de la déconnexion. Veuillez réessayer.'
       )
       setIsDisconnecting(false)
     }

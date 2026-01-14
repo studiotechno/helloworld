@@ -58,7 +58,7 @@ export async function GET(req: Request, { params }: RouteParams) {
 
     if (repository.user_id !== user.id) {
       return NextResponse.json(
-        { error: { code: 'FORBIDDEN', message: 'Acces refuse' } },
+        { error: { code: 'FORBIDDEN', message: 'Accès refusé' } },
         { status: 403 }
       )
     }

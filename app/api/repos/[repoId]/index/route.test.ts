@@ -167,7 +167,7 @@ describe('POST /api/repos/[repoId]/index', () => {
     expect(data.jobId).toBe(TEST_JOB_ID)
     expect(data.status).toBe('fetching')
     expect(data.progress).toBe(25)
-    expect(data.message).toBe('Indexation deja en cours')
+    expect(data.message).toBe('Indexation déjà en cours')
     expect(mockStartIndexingJob).not.toHaveBeenCalled()
   })
 

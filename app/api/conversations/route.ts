@@ -79,7 +79,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('[API] Create conversation error:', error)
     return NextResponse.json(
-      { error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de la creation de la conversation' } },
+      { error: { code: 'INTERNAL_ERROR', message: 'Erreur lors de la création de la conversation' } },
       { status: 500 }
     )
   }
