@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { z } from 'zod'
+import { checkRepoLimit } from '@/lib/stripe'
 
 // Request schema for connecting a repository
 const connectRequestSchema = z.object({
@@ -50,16 +51,49 @@ export async function POST(req: Request) {
     // Check if repo exceeds size threshold and return warning flag
     const exceedsSizeLimit = size ? size > SIZE_WARNING_THRESHOLD_KB : false
 
-    // Deactivate any existing active repository for this user (MVP: 1 repo)
-    await prisma.repositories.updateMany({
+    // Check repo limit based on subscription plan
+    const repoCheck = await checkRepoLimit(userId)
+
+    // Check if this is a reconnection of an existing repo (doesn't count against limit)
+    const existingRepo = await prisma.repositories.findUnique({
       where: {
-        user_id: userId,
-        is_active: true,
-      },
-      data: {
-        is_active: false,
+        user_id_github_repo_id: {
+          user_id: userId,
+          github_repo_id: String(repoId),
+        },
       },
     })
+
+    // If not reconnecting and limit reached, block
+    if (!existingRepo && !repoCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'REPO_LIMIT_REACHED',
+            message: 'Limite de repositories atteinte. Passez a un plan superieur.',
+            data: {
+              current: repoCheck.current,
+              limit: repoCheck.limit,
+            },
+          },
+        },
+        { status: 403 }
+      )
+    }
+
+    // Deactivate other active repositories if limit is 1 (Free plan behavior)
+    // For higher plans, keep other repos active
+    if (repoCheck.limit === 1) {
+      await prisma.repositories.updateMany({
+        where: {
+          user_id: userId,
+          is_active: true,
+        },
+        data: {
+          is_active: false,
+        },
+      })
+    }
 
     // Connect the new repository (upsert to handle reconnecting same repo)
     const repository = await prisma.repositories.upsert({

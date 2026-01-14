@@ -12,6 +12,7 @@ import {
   type RetrievedChunk,
 } from '@/lib/rag'
 import { getModelForQuery, logRouting } from '@/lib/ai'
+import { checkTokenLimit } from '@/lib/stripe'
 
 // Part schema for AI SDK v6 message format
 // Accept any part type (text, tool_call, tool_result, etc.)
@@ -70,6 +71,25 @@ export async function POST(req: Request) {
       return new Response(
         JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Non authentifie' } }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check token limit before processing
+    const tokenCheck = await checkTokenLimit(user.id)
+    if (!tokenCheck.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'TOKEN_LIMIT_REACHED',
+            message: 'Limite de tokens atteinte. Passez a un plan superieur pour continuer.',
+            data: {
+              limit: tokenCheck.limit,
+              used: tokenCheck.used,
+              remaining: tokenCheck.remaining,
+            },
+          },
+        }),
+        { status: 429, headers: { 'Content-Type': 'application/json' } }
       )
     }
 

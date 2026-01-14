@@ -27,6 +27,7 @@ model users {
   conversations conversations[]
   instructions  user_instructions?
   token_usage   token_usage[]
+  subscription  subscriptions?
 
   @@map("users")
 }
@@ -49,6 +50,44 @@ model token_usage {
   @@index([user_id, type], map: "idx_token_usage_user_type")
   @@index([user_id, model], map: "idx_token_usage_user_model")
   @@map("token_usage")
+}
+
+// Subscriptions table - tracks user subscription state synced with Stripe
+model subscriptions {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                String    @unique @db.Uuid
+
+  // Stripe identifiers
+  stripe_customer_id     String    @unique
+  stripe_subscription_id String?   @unique
+  stripe_price_id        String?
+
+  // Plan details
+  plan                   String    @default("free") // 'free', 'pro', 'business'
+  status                 String    @default("active") // Stripe subscription status
+  billing_interval       String?   // 'month' or 'year'
+
+  // Limits (denormalized for fast access)
+  token_limit            Int       @default(40000)  // Monthly token limit
+  repo_limit             Int       @default(1)      // Max repos (-1 = unlimited)
+
+  // Billing period
+  current_period_start   DateTime? @db.Timestamptz(6)
+  current_period_end     DateTime? @db.Timestamptz(6)
+  cancel_at_period_end   Boolean   @default(false)
+
+  // Tracking
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([stripe_customer_id])
+  @@index([stripe_subscription_id])
+  @@index([plan])
+  @@index([status])
+  @@map("subscriptions")
 }
 
 // User Instructions table - stores personalized context for AI responses

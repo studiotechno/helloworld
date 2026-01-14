@@ -39,9 +39,8 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     if (!user) {
       return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Non authentifie' } },
+        { error: { code: 'UNAUTHORIZED', message: 'Non authentifié' } },
         { status: 401 }
-      )
     }
 
     if (!user.github_token) {
@@ -63,14 +62,14 @@ export async function POST(req: Request, { params }: RouteParams) {
 
     if (!repository) {
       return NextResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Repository non trouve' } },
+        { error: { code: 'NOT_FOUND', message: 'Repository non trouvé' } },
         { status: 404 }
       )
     }
 
     if (repository.user_id !== user.id) {
       return NextResponse.json(
-        { error: { code: 'FORBIDDEN', message: 'Acces refuse' } },
+        { error: { code: 'FORBIDDEN', message: 'Accès refusé' } },
         { status: 403 }
       )
     }
@@ -82,7 +81,7 @@ export async function POST(req: Request, { params }: RouteParams) {
         jobId: existingJob.id,
         status: existingJob.status,
         progress: existingJob.progress,
-        message: 'Indexation deja en cours',
+        message: 'Indexation déjà en cours',
         statusUrl: `/api/repos/${repoId}/index/status`,
       })
     }
@@ -127,7 +126,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       jobId,
       status: 'pending',
       progress: 0,
-      message: 'Indexation demarree',
+      message: 'Indexation démarrée',
       statusUrl: `/api/repos/${repoId}/index/status`,
     })
   } catch (error) {
@@ -169,7 +168,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     if (!user) {
       return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Non authentifie' } },
+        { error: { code: 'UNAUTHORIZED', message: 'Non authentifié' } },
         { status: 401 }
       )
     }
@@ -181,14 +180,14 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     if (!repository) {
       return NextResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Repository non trouve' } },
+        { error: { code: 'NOT_FOUND', message: 'Repository non trouvé' } },
         { status: 404 }
       )
     }
 
     if (repository.user_id !== user.id) {
       return NextResponse.json(
-        { error: { code: 'FORBIDDEN', message: 'Acces refuse' } },
+        { error: { code: 'FORBIDDEN', message: 'Accès refusé' } },
         { status: 403 }
       )
     }
@@ -198,7 +197,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
 
     if (!existingJob) {
       return NextResponse.json(
-        { error: { code: 'NOT_FOUND', message: 'Aucun job d\'indexation trouve' } },
+        { error: { code: 'NOT_FOUND', message: 'Aucun job d\'indexation trouvé' } },
         { status: 404 }
       )
     }
@@ -215,7 +214,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       }
 
       return NextResponse.json({
-        message: 'Indexation annulee',
+        message: 'Indexation annulée',
         status: cancelledJob.status,
       })
     }
@@ -233,7 +232,7 @@ export async function DELETE(req: Request, { params }: RouteParams) {
       })
 
       return NextResponse.json({
-        message: 'Indexation supprimee',
+        message: 'Indexation supprimée',
         chunksDeleted: deletedChunks.count,
       })
     }

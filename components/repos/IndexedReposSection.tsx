@@ -54,13 +54,13 @@ export function IndexedReposSection() {
   const handleRepoClick = async (repoId: string, fullName: string) => {
     try {
       await activateRepo.mutateAsync(repoId)
-      toast.success(`${fullName} selectionne`)
+      toast.success(`${fullName} sélectionné`)
       router.push('/chat')
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Impossible de selectionner le repo'
+          : 'Impossible de sélectionner le repo'
       )
     }
   }
@@ -75,11 +75,11 @@ export function IndexedReposSection() {
       <div className="flex items-center gap-2 mb-2">
         <Database className="h-4 w-4 text-green-500" />
         <h2 className="text-sm font-medium text-muted-foreground">
-          Repositories indexes
+          Repositories indexés
         </h2>
       </div>
       <p className="text-xs text-muted-foreground mb-3">
-        Cliquez sur un repository pour demarrer une conversation.
+        Cliquez sur un repository pour démarrer une conversation.
       </p>
 
       {isLoading ? (
@@ -103,31 +103,31 @@ export function IndexedReposSection() {
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
             >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-foreground text-sm truncate">
-                    {repo.full_name}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {activeRepo?.id === repo.id && (
-                      <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-pink-500/20 text-pink-500">
-                        Actif
-                      </span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-foreground text-sm truncate">
+                  {repo.full_name}
+                </span>
+                <div className="flex items-center gap-2">
+                  {activeRepo?.id === repo.id && (
+                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-pink-500/20 text-pink-500">
+                      Actif
+                    </span>
+                  )}
+                  <div className="flex items-center gap-1 text-xs text-green-500">
+                    {activateRepo.isPending ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Sélection...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-3 w-3" />
+                        <span></span>
+                      </>
                     )}
-                    <div className="flex items-center gap-1 text-xs text-green-500">
-                      {activateRepo.isPending ? (
-                        <>
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span>Selection...</span>
-                        </>
-                      ) : (
-                        <>
-                          <MessageSquare className="h-3 w-3" />
-                          <span></span>
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
+              </div>
 
               <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground">
                 {repo.indexing?.completedAt && (
