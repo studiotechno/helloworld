@@ -144,18 +144,24 @@ async function makeRequestWithRetry(
   throw lastError || new VoyageClientError('Unknown error after retries')
 }
 
+export interface EmbedCodeResult {
+  embeddings: number[][]
+  totalTokens: number
+}
+
 /**
  * Embed code chunks for storage/indexing
  *
  * @param chunks - Array of code strings to embed
- * @returns Array of embedding vectors (1024 dimensions each)
+ * @returns Object with embedding vectors and total tokens used
  */
-export async function embedCode(chunks: string[]): Promise<number[][]> {
+export async function embedCode(chunks: string[]): Promise<EmbedCodeResult> {
   if (chunks.length === 0) {
-    return []
+    return { embeddings: [], totalTokens: 0 }
   }
 
   const results: number[][] = []
+  let totalTokens = 0
 
   // Process in batches
   for (let i = 0; i < chunks.length; i += MAX_BATCH_SIZE) {
@@ -170,6 +176,7 @@ export async function embedCode(chunks: string[]): Promise<number[][]> {
     }
 
     const response = await makeRequestWithRetry(validBatch, 'document')
+    totalTokens += response.usage.total_tokens
 
     // Map embeddings back, handling filtered empty strings
     let validIndex = 0
@@ -183,7 +190,7 @@ export async function embedCode(chunks: string[]): Promise<number[][]> {
     }
   }
 
-  return results
+  return { embeddings: results, totalTokens }
 }
 
 /**

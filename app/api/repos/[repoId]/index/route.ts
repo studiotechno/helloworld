@@ -114,6 +114,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       repo,
       branch: repository.default_branch || undefined,
       jobId,
+      userId: user.id,
       onProgress: async (phase, progress, message) => {
         // Progress updates are handled by the pipeline internally
         log.debug(`${phase} - ${progress}%`, { repoId, message })
@@ -136,7 +137,7 @@ export async function POST(req: Request, { params }: RouteParams) {
       {
         error: {
           code: 'INDEXATION_FAILED',
-          message: 'Impossible de demarrer l\'indexation',
+          message: 'Impossible de démarrer l\'indexation',
         },
       },
       { status: 500 }

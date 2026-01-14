@@ -39,8 +39,9 @@ describe('voyage-client', () => {
 
       const result = await embedCode(['function hello() { return "world"; }'])
 
-      expect(result).toHaveLength(1)
-      expect(result[0]).toHaveLength(1024)
+      expect(result.embeddings).toHaveLength(1)
+      expect(result.embeddings[0]).toHaveLength(1024)
+      expect(result.totalTokens).toBe(100)
       expect(mockFetch).toHaveBeenCalledTimes(1)
       expect(mockFetch).toHaveBeenCalledWith(
         'https://api.voyageai.com/v1/embeddings',
@@ -72,14 +73,16 @@ describe('voyage-client', () => {
 
       const result = await embedCode(['chunk1', 'chunk2'])
 
-      expect(result).toHaveLength(2)
-      expect(result[0]).toEqual(mockEmbedding1)
-      expect(result[1]).toEqual(mockEmbedding2)
+      expect(result.embeddings).toHaveLength(2)
+      expect(result.embeddings[0]).toEqual(mockEmbedding1)
+      expect(result.embeddings[1]).toEqual(mockEmbedding2)
+      expect(result.totalTokens).toBe(200)
     })
 
     it('should return empty array for empty input', async () => {
       const result = await embedCode([])
-      expect(result).toEqual([])
+      expect(result.embeddings).toEqual([])
+      expect(result.totalTokens).toBe(0)
       expect(mockFetch).not.toHaveBeenCalled()
     })
 
@@ -97,10 +100,11 @@ describe('voyage-client', () => {
 
       const result = await embedCode(['valid code', '', '   '])
 
-      expect(result).toHaveLength(3)
-      expect(result[0]).toEqual(mockEmbedding)
-      expect(result[1]).toEqual(new Array(1024).fill(0)) // Empty string
-      expect(result[2]).toEqual(new Array(1024).fill(0)) // Whitespace only
+      expect(result.embeddings).toHaveLength(3)
+      expect(result.embeddings[0]).toEqual(mockEmbedding)
+      expect(result.embeddings[1]).toEqual(new Array(1024).fill(0)) // Empty string
+      expect(result.embeddings[2]).toEqual(new Array(1024).fill(0)) // Whitespace only
+      expect(result.totalTokens).toBe(100)
     })
 
     it('should batch large inputs', async () => {
@@ -139,7 +143,8 @@ describe('voyage-client', () => {
 
       const result = await embedCode(chunks)
 
-      expect(result).toHaveLength(150)
+      expect(result.embeddings).toHaveLength(150)
+      expect(result.totalTokens).toBe(1200) // 1000 + 200
       expect(mockFetch).toHaveBeenCalledTimes(2)
     })
 
@@ -188,7 +193,8 @@ describe('voyage-client', () => {
 
       const result = await embedCode(['code'])
 
-      expect(result).toHaveLength(1)
+      expect(result.embeddings).toHaveLength(1)
+      expect(result.totalTokens).toBe(100)
       expect(mockFetch).toHaveBeenCalledTimes(2)
     }, 15000) // Longer timeout due to retry delay
   })

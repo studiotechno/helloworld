@@ -55,7 +55,7 @@ export async function rerankChunks(
   options: RerankOptions = {}
 ): Promise<RerankedChunk[]> {
   const {
-    topK = 15,
+    topK = 10,
     minScore = 0,
     model = 'rerank-2.5',
     preserveOriginalScore = false,

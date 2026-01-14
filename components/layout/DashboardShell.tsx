@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
-import { Sparkles, FolderGit2, BookOpen } from 'lucide-react'
+import { FolderGit2, BookOpen } from 'lucide-react'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { useRepoTechnologies } from '@/hooks/useRepoTechnologies'
 import { useNewConversationShortcut } from '@/hooks/use-keyboard-shortcuts'
@@ -58,8 +58,12 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           >
             <SheetHeader className="border-b border-border/50 px-4 py-4">
               <SheetTitle className="flex items-center gap-2">
-                <Sparkles className="size-5 text-primary" />
-                <span>techno</span>
+                <svg className="size-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="6" cy="12" r="4" fill="currentColor" />
+                  <circle cx="18" cy="12" r="4" fill="currentColor" />
+                  <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="2" />
+                </svg>
+                <span>onhcet</span>
               </SheetTitle>
             </SheetHeader>
             <MobileSidebarContent onClose={() => setMobileSheetOpen(false)} />

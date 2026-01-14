@@ -45,12 +45,15 @@ export function IndexingInProgressSection() {
 
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <Loader2 className="h-4 w-4 text-pink-500 animate-spin" />
         <h2 className="text-sm font-medium text-muted-foreground">
           Indexation en cours
         </h2>
       </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        L&apos;indexation peut prendre plusieurs minutes selon la taille du repository.
+      </p>
 
       {isLoading ? (
         <div className="grid gap-3">
@@ -94,11 +97,6 @@ export function IndexingInProgressSection() {
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span className={cn("font-medium", phaseColor.text)}>{progress}%</span>
-                    {repo.indexing.filesTotal !== null && repo.indexing.filesProcessed !== null && (
-                      <span>
-                        {repo.indexing.filesProcessed} / {repo.indexing.filesTotal} fichiers
-                      </span>
-                    )}
                   </div>
                 </div>
 

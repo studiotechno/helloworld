@@ -205,10 +205,9 @@ export async function POST(req: Request) {
           // - Metadata-based for "list all X" queries (exhaustive results)
           // - Vector search for specific questions (semantic matching)
           // - Hybrid for detected types that aren't list queries
-          // Optimization: Reduced limits to save tokens while maintaining quality
           const retrievalResult = await smartRetrieve(lastUserContent, repoId, {
-            vectorLimit: 15,      // Was 30 - still good semantic coverage
-            metadataLimit: 50,    // Was 100 - sufficient for list queries
+            vectorLimit: 30,
+            metadataLimit: 100,
           })
           retrievedChunks = retrievalResult.chunks
 
@@ -217,9 +216,8 @@ export async function POST(req: Request) {
 
           if (retrievedChunks.length > 0) {
             // Build formatted context for the LLM
-            // Optimization: Reduced from 25000 to 10000 tokens
             const contextResult = buildCodeContext(retrievedChunks, {
-              maxTokens: 10000,
+              maxTokens: 25000,
               groupByFile: true,
               language: 'fr',
             })
@@ -271,7 +269,7 @@ NE REPONDS PAS avec des exemples generiques ou inventes. Dis simplement que tu n
       messages,
       system: systemPrompt,
       maxOutputTokens: 2048,
-      onFinish: async ({ text }) => {
+      onFinish: async ({ text, usage }) => {
         // Save assistant message after streaming completes
         if (conversationId && text) {
           // Extract citations from retrieved chunks
@@ -293,6 +291,24 @@ NE REPONDS PAS avec des exemples generiques ou inventes. Dis simplement que tu n
             where: { id: conversationId },
             data: { updated_at: new Date() },
           })
+        }
+
+        // Record token usage for billing
+        if (usage && (usage.inputTokens || usage.outputTokens)) {
+          try {
+            await prisma.token_usage.create({
+              data: {
+                user_id: user.id,
+                type: 'chat',
+                model: analysis.model, // 'haiku', 'sonnet', or 'devstral'
+                input_tokens: usage.inputTokens ?? 0,
+                output_tokens: usage.outputTokens ?? 0,
+              },
+            })
+          } catch (tokenError) {
+            // Don't fail the request if token tracking fails
+            console.error('[API] Token usage tracking error:', tokenError)
+          }
         }
       },
     })

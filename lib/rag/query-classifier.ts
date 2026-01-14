@@ -14,6 +14,8 @@ export type QueryType =
   | 'TESTS'
   | 'TYPES'
   | 'CONFIG'
+  | 'EMBEDDINGS'
+  | 'INDEXING'
   | 'GENERIC'
 
 interface QueryPattern {
@@ -59,11 +61,43 @@ const QUERY_PATTERNS: QueryPattern[] = [
       'config', 'configuration', 'settings', 'env', 'environment',
       'stack', 'tech stack', 'technology', 'technologies', 'framework', 'frameworks',
       'dependencies', 'package', 'packages', 'library', 'libraries',
+      'font', 'fonts', 'typography', 'typeface', 'color', 'colors', 'theme',
+      'tailwind', 'css', 'style', 'styles', 'design', 'layout',
     ],
     keywordsFr: [
       'config', 'configuration', 'parametres', 'environnement',
       'stack', 'technique', 'technologie', 'technologies', 'framework', 'frameworks',
       'dependances', 'librairie', 'librairies', 'bibliotheque', 'bibliotheques',
+      'police', 'polices', 'typographie', 'typo', 'typos', 'couleur', 'couleurs',
+      'theme', 'tailwind', 'css', 'style', 'styles', 'design', 'layout', 'mise en page',
+    ],
+  },
+  {
+    type: 'EMBEDDINGS',
+    keywords: [
+      'embedding', 'embeddings', 'vector', 'vectors', 'vectorization',
+      'voyage', 'pgvector', 'pinecone', 'rag', 'retrieval',
+      'similarity', 'semantic search', 'chunk', 'chunks',
+    ],
+    keywordsFr: [
+      'embedding', 'embeddings', 'vecteur', 'vecteurs', 'vectorisation',
+      'voyage', 'pgvector', 'pinecone', 'rag', 'retrieval',
+      'similarite', 'recherche semantique', 'chunk', 'chunks', 'stockage',
+    ],
+  },
+  {
+    type: 'INDEXING',
+    keywords: [
+      'index', 'indexing', 'reindex', 'reindexing', 're-index',
+      'pipeline', 'parsing', 'chunking', 'contextual',
+      'devstral', 'mistral', 'context generation',
+      'webhook', 'trigger', 'github webhook',
+    ],
+    keywordsFr: [
+      'index', 'indexation', 'reindexation', 're-indexation', 'reindexer',
+      'pipeline', 'parsing', 'chunking', 'contextuel',
+      'devstral', 'mistral', 'generation de contexte',
+      'webhook', 'declencheur', 'trigger',
     ],
   },
 ]
@@ -171,6 +205,33 @@ export function getMetadataFilter(queryType: QueryType): {
           '%docker-compose%',
           '%.nvmrc',
           '%.node-version',
+          '%layout.tsx',
+          '%globals.css',
+          '%tailwind%',
+          '%theme%',
+        ],
+      }
+    case 'EMBEDDINGS':
+      return {
+        filePathPatterns: [
+          '%embeddings%',
+          '%voyage%',
+          '%vector%',
+          '%rag%',
+          '%lib/db%',
+          '%reranker%',
+          '%retrieval%',
+        ],
+      }
+    case 'INDEXING':
+      return {
+        filePathPatterns: [
+          '%indexing%',
+          '%pipeline%',
+          '%parsing%',
+          '%chunker%',
+          '%contextual%',
+          '%ast-%',
         ],
       }
     case 'GENERIC':
@@ -191,6 +252,8 @@ export function getQueryTypeLabel(queryType: QueryType, lang: 'en' | 'fr' = 'fr'
     TESTS: { en: 'tests', fr: 'tests' },
     TYPES: { en: 'type definitions', fr: 'definitions de types' },
     CONFIG: { en: 'configuration files', fr: 'fichiers de configuration' },
+    EMBEDDINGS: { en: 'embeddings & RAG', fr: 'embeddings et RAG' },
+    INDEXING: { en: 'indexing pipeline', fr: 'pipeline d\'indexation' },
     GENERIC: { en: 'code', fr: 'code' },
   }
 

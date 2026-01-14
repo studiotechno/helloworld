@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,61 +56,47 @@ export function ConversationItem({
 
   if (isCollapsed) {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClick}
-            className={cn(
-              'size-10 rounded-lg',
-              isActive && 'bg-accent text-accent-foreground'
-            )}
-          >
-            <span className="text-base">{emoji}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p className="max-w-[200px] truncate">{title}</p>
-        </TooltipContent>
-      </Tooltip>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={handleClick}
+        className={cn(
+          'size-8 rounded-lg',
+          isActive && 'bg-accent text-accent-foreground'
+        )}
+      >
+        <span className="text-sm">{emoji}</span>
+      </Button>
     )
   }
 
   return (
     <>
       <div className="group relative w-full">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              onClick={handleClick}
-              className={cn(
-                'w-full justify-start gap-2 rounded-lg px-3 py-2 text-left',
-                isActive && 'bg-accent text-accent-foreground'
-              )}
-            >
-              {/* Emoji - hidden on hover */}
-              <span className="text-base shrink-0 group-hover:opacity-0 transition-opacity duration-150">
-                {emoji}
-              </span>
-              <span className="truncate text-sm">{title}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-[300px]">
-            <p className="break-words">{title}</p>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          onClick={handleClick}
+          className={cn(
+            'w-full justify-start gap-1.5 rounded-lg px-2 py-1 text-left h-auto min-h-0',
+            isActive && 'bg-accent text-accent-foreground'
+          )}
+        >
+          {/* Emoji - hidden on hover */}
+          <span className="text-sm shrink-0 group-hover:opacity-0 transition-opacity duration-150">
+            {emoji}
+          </span>
+          <span className="truncate text-sm">{title}</span>
+        </Button>
 
         {/* 3 dots menu - positioned absolutely, visible on hover */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="absolute left-3 top-1/2 -translate-y-1/2 size-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-muted rounded"
+              className="absolute left-2 top-1/2 -translate-y-1/2 size-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:bg-muted rounded"
               aria-label="Options de la conversation"
             >
-              <MoreHorizontal className="size-4" />
+              <MoreHorizontal className="size-3" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" side="right" className="w-40">

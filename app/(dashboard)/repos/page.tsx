@@ -35,8 +35,8 @@ export default function ReposPage() {
 
         toast.success('Repository connecte')
 
-        // Navigate to dashboard (chat will be available in Epic 3)
-        router.push('/dashboard')
+        // Navigate to chat to show index button
+        router.push('/chat')
       } catch (error) {
         toast.error(
           error instanceof Error

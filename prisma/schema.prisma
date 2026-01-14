@@ -22,12 +22,33 @@ model users {
   created_at   DateTime @default(now()) @db.Timestamptz(6)
   updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
-  // Relations (to be added in future stories)
+  // Relations
   repositories  repositories[]
   conversations conversations[]
   instructions  user_instructions?
+  token_usage   token_usage[]
 
   @@map("users")
+}
+
+// Token Usage table - tracks API token consumption for billing
+model token_usage {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String   @db.Uuid
+  type          String   // 'chat' | 'indexing_context' | 'indexing_embedding'
+  model         String   // 'haiku' | 'sonnet' | 'devstral' | 'voyage-code-3'
+  input_tokens  Int
+  output_tokens Int      @default(0)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([created_at])
+  @@index([user_id, type], map: "idx_token_usage_user_type")
+  @@index([user_id, model], map: "idx_token_usage_user_model")
+  @@map("token_usage")
 }
 
 // User Instructions table - stores personalized context for AI responses

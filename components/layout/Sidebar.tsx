@@ -5,13 +5,11 @@ import { useRouter, usePathname } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import {
-  MessageSquarePlus,
+  SquarePen,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
-  Sparkles,
   FolderGit2,
   BookOpen,
   Loader2,
@@ -20,11 +18,12 @@ import { cn } from '@/lib/utils'
 import { useConversations, useDeleteConversation, useRenameConversation, type Conversation } from '@/hooks/use-conversations'
 import { useActiveRepo } from '@/hooks/useActiveRepo'
 import { useIndexingStatus } from '@/hooks/useIndexingStatus'
+import { useTokenUsage } from '@/hooks/useTokenUsage'
 import { groupConversationsByDate, DATE_GROUP_LABELS, DATE_GROUP_ORDER } from '@/lib/utils/date-groups'
 import { ConversationItem } from './ConversationItem'
 import { DeleteConversationDialog } from './DeleteConversationDialog'
 
-const APP_VERSION = '3.8'
+const APP_VERSION = '0.1'
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -39,6 +38,12 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
   const deleteConversation = useDeleteConversation()
   const renameConversation = useRenameConversation()
   const { isIndexed, isInProgress } = useIndexingStatus(activeRepo?.id)
+  const { data: tokenUsage } = useTokenUsage()
+
+  // Calculate total tokens
+  const totalTokens = tokenUsage
+    ? (tokenUsage.total.input_tokens + tokenUsage.total.output_tokens)
+    : 0
 
   // Can only create new conversation if repo is indexed
   const canCreateConversation = activeRepo && isIndexed && !isInProgress
@@ -102,113 +107,77 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/50 px-4">
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <Sparkles className="size-5 text-primary" />
-              <span className="text-lg font-semibold">techno</span>
+              <svg className="size-5 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="6" cy="12" r="4" fill="currentColor" />
+                <circle cx="18" cy="12" r="4" fill="currentColor" />
+                <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="2" />
+              </svg>
+              <span className="text-lg font-semibold">onhcet</span>
             </div>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggle}
-                className={cn('shrink-0', isCollapsed && 'mx-auto')}
-                aria-label={isCollapsed ? 'Développer la sidebar' : 'Réduire la sidebar'}
-              >
-                {isCollapsed ? (
-                  <PanelLeft className="size-4" />
-                ) : (
-                  <PanelLeftClose className="size-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              <p>{isCollapsed ? 'Développer' : 'Réduire'} (⌘+B)</p>
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className={cn('shrink-0', isCollapsed && 'mx-auto')}
+            aria-label={isCollapsed ? 'Développer la sidebar' : 'Réduire la sidebar'}
+          >
+            {isCollapsed ? (
+              <PanelLeft className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )}
+          </Button>
         </div>
 
         {/* New Conversation Button */}
         <div className="p-3 space-y-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={() => canCreateConversation && router.push('/chat')}
-                disabled={!canCreateConversation}
-                className={cn(
-                  'w-full gap-2 rounded-xl transition-shadow',
-                  canCreateConversation
-                    ? 'bg-primary text-primary-foreground shadow-[var(--glow-pink)] hover:shadow-[0_0_30px_oklch(0.656_0.241_354.308_/_60%)]'
-                    : 'bg-muted text-muted-foreground cursor-not-allowed',
-                  isCollapsed && 'justify-center px-2'
-                )}
-              >
-                <MessageSquarePlus className="size-4 shrink-0" />
-                {!isCollapsed && <span>Nouvelle conversation</span>}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side={isCollapsed ? 'right' : 'bottom'}>
-              <p>
-                {!activeRepo
-                  ? 'Selectionnez un repository'
-                  : !isIndexed
-                    ? 'Indexation requise'
-                    : isInProgress
-                      ? 'Indexation en cours...'
-                      : 'Nouvelle conversation (⌘+N)'}
-              </p>
-            </TooltipContent>
-          </Tooltip>
+          <Button
+            onClick={() => canCreateConversation && router.push(`/chat?new=${Date.now()}`)}
+            disabled={!canCreateConversation}
+            className={cn(
+              'w-full gap-2 rounded-xl transition-shadow',
+              canCreateConversation
+                ? 'bg-primary text-primary-foreground shadow-[var(--glow-pink)] hover:shadow-[0_0_30px_oklch(0.656_0.241_354.308_/_60%)]'
+                : 'bg-muted text-muted-foreground cursor-not-allowed',
+              isCollapsed && 'justify-center px-2'
+            )}
+          >
+            <SquarePen className="size-4 shrink-0" />
+            {!isCollapsed && <span>Nouvelle conversation</span>}
+          </Button>
 
           {/* Select Repository Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={() => router.push('/repos')}
-                className={cn(
-                  'w-full gap-2 rounded-xl border-border/50 hover:bg-accent hover:text-accent-foreground',
-                  isCollapsed && 'justify-center px-2'
-                )}
-              >
-                <FolderGit2 className="size-4 shrink-0" />
-                {!isCollapsed && <span>Repositories</span>}
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                <p>Repositories</p>
-              </TooltipContent>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/repos')}
+            className={cn(
+              'w-full gap-2 rounded-xl border-border/50 hover:bg-accent hover:text-accent-foreground',
+              isCollapsed && 'justify-center px-2'
             )}
-          </Tooltip>
+          >
+            <FolderGit2 className="size-4 shrink-0" />
+            {!isCollapsed && <span>Repositories</span>}
+          </Button>
 
           {/* Documentation Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={() => router.push('/docs')}
-                className={cn(
-                  'w-full gap-2 rounded-xl border-border/50 hover:bg-accent hover:text-accent-foreground',
-                  isCollapsed && 'justify-center px-2'
-                )}
-              >
-                <BookOpen className="size-4 shrink-0" />
-                {!isCollapsed && <span>Documentation</span>}
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                <p>Documentation</p>
-              </TooltipContent>
+          <Button
+            variant="outline"
+            onClick={() => router.push('/docs')}
+            className={cn(
+              'w-full gap-2 rounded-xl border-border/50 hover:bg-accent hover:text-accent-foreground',
+              isCollapsed && 'justify-center px-2'
             )}
-          </Tooltip>
+          >
+            <BookOpen className="size-4 shrink-0" />
+            {!isCollapsed && <span>Documentation</span>}
+          </Button>
         </div>
 
         <Separator className="opacity-50" />
 
         {/* Conversation List */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0 overflow-hidden">
           <div className="p-3">
             {!isCollapsed ? (
               <div className="space-y-4">
@@ -223,7 +192,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
 
                     return (
                       <div key={group} className="space-y-1">
-                        <p className="px-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        <p className="px-2 text-xs font-medium text-muted-foreground">
                           {DATE_GROUP_LABELS[group]}
                         </p>
                         <div className="space-y-1">
@@ -264,31 +233,27 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
                     />
                   ))
                 ) : (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex size-10 items-center justify-center rounded-lg text-muted-foreground">
-                        <MessageSquare className="size-4" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Aucune conversation</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <div className="flex size-10 items-center justify-center rounded-lg text-muted-foreground">
+                    <MessageSquare className="size-4" />
+                  </div>
                 )}
               </div>
             )}
           </div>
         </ScrollArea>
 
-        {/* Footer with keyboard hint and version */}
+        {/* Footer with tokens and version */}
         {!isCollapsed && (
-          <div className="shrink-0 border-t border-border/50 p-3 space-y-1">
-            <p className="text-center text-xs text-muted-foreground/70">
-              <kbd className="rounded border border-border/50 bg-muted/50 px-1.5 py-0.5 font-mono text-[10px]">
-                ⌘+B
-              </kbd>
-              {' '}pour réduire
-            </p>
+          <div className="shrink-0 border-t border-border/50 p-3 space-y-2">
+            <button
+              onClick={() => router.push('/settings#usage')}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-muted/50 px-3 py-2 transition-colors hover:bg-muted"
+            >
+              <span className="font-semibold tabular-nums text-foreground">
+                {totalTokens.toLocaleString('fr-FR')}
+              </span>
+              <span className="text-xs text-muted-foreground">tokens</span>
+            </button>
             <p className="text-center text-[10px] text-muted-foreground/50">
               v{APP_VERSION}
             </p>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Database, Calendar, GitCommit, ExternalLink, Loader2 } from 'lucide-react'
+import { Database, Calendar, GitCommit, ExternalLink, Loader2, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useIndexedRepos, useActivateRepo, useActiveRepo } from '@/hooks'
@@ -72,12 +72,15 @@ export function IndexedReposSection() {
 
   return (
     <div className="mb-8">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <Database className="h-4 w-4 text-green-500" />
         <h2 className="text-sm font-medium text-muted-foreground">
-          Repo indéxés
+          Repositories indexes
         </h2>
       </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Cliquez sur un repository pour demarrer une conversation.
+      </p>
 
       {isLoading ? (
         <div className="grid gap-2">
@@ -112,11 +115,16 @@ export function IndexedReposSection() {
                     )}
                     <div className="flex items-center gap-1 text-xs text-green-500">
                       {activateRepo.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span>Selection...</span>
+                        </>
                       ) : (
-                        <Database className="h-3 w-3" />
+                        <>
+                          <MessageSquare className="h-3 w-3" />
+                          <span></span>
+                        </>
                       )}
-                      <span>{activateRepo.isPending ? 'Selection...' : 'Indexe'}</span>
                     </div>
                   </div>
                 </div>

@@ -60,13 +60,19 @@ IMPORTANT: Return a JSON array with descriptions in the same order as the input 
 Example response format:
 ["Description for chunk 1", "Description for chunk 2", "Description for chunk 3"]`
 
+interface BatchContextResult {
+  descriptions: string[]
+  inputTokens: number
+  outputTokens: number
+}
+
 /**
  * Generate contexts for multiple chunks in a single LLM request
  */
 async function generateBatchContexts(
   chunks: ChunkForContext[]
-): Promise<string[]> {
-  if (chunks.length === 0) return []
+): Promise<BatchContextResult> {
+  if (chunks.length === 0) return { descriptions: [], inputTokens: 0, outputTokens: 0 }
 
   // Build the prompt with all chunks
   let prompt = `Generate brief descriptions for these ${chunks.length} code chunks:\n\n`
@@ -85,16 +91,24 @@ async function generateBatchContexts(
   prompt += `Return a JSON array with ${chunks.length} descriptions, one for each chunk in order.`
 
   const maxRetries = 3
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const { text } = await generateText({
+      const { text, usage } = await generateText({
         model: models.devstral,
         system: BATCH_CONTEXT_SYSTEM_PROMPT,
         prompt,
         maxOutputTokens: MAX_OUTPUT_TOKENS,
         temperature: 0,
       })
+
+      // Track token usage
+      if (usage) {
+        totalInputTokens += usage.inputTokens ?? 0
+        totalOutputTokens += usage.outputTokens ?? 0
+      }
 
       // Parse the JSON response
       const jsonMatch = text.match(/\[[\s\S]*\]/)
@@ -114,10 +128,14 @@ async function generateBatchContexts(
         while (descriptions.length < chunks.length) {
           descriptions.push('')
         }
-        return descriptions.slice(0, chunks.length)
+        return {
+          descriptions: descriptions.slice(0, chunks.length),
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+        }
       }
 
-      return descriptions
+      return { descriptions, inputTokens: totalInputTokens, outputTokens: totalOutputTokens }
     } catch (error: unknown) {
       const isRateLimit =
         error instanceof Error &&
@@ -143,11 +161,25 @@ async function generateBatchContexts(
 
       console.error('[ContextualGenerator] Error generating batch context:', error)
       // Return empty strings for all chunks on error
-      return new Array(chunks.length).fill('')
+      return {
+        descriptions: new Array(chunks.length).fill(''),
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+      }
     }
   }
 
-  return new Array(chunks.length).fill('')
+  return {
+    descriptions: new Array(chunks.length).fill(''),
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
+  }
+}
+
+export interface ContextBatchResult {
+  contexts: string[]
+  inputTokens: number
+  outputTokens: number
 }
 
 /**
@@ -159,18 +191,22 @@ export async function generateContextsBatch(
   chunks: ChunkForContext[],
   _fileContext?: FileContext, // Reserved for future use
   onProgress?: (completed: number, total: number) => void
-): Promise<string[]> {
+): Promise<ContextBatchResult> {
   const results: string[] = new Array(chunks.length).fill('')
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
 
   // Process in batches
   for (let i = 0; i < chunks.length; i += CHUNKS_PER_REQUEST) {
     const batch = chunks.slice(i, i + CHUNKS_PER_REQUEST)
 
     // Generate contexts for this batch in a single request
-    const batchResults = await generateBatchContexts(batch)
+    const batchResult = await generateBatchContexts(batch)
+    totalInputTokens += batchResult.inputTokens
+    totalOutputTokens += batchResult.outputTokens
 
     // Store results
-    batchResults.forEach((context, idx) => {
+    batchResult.descriptions.forEach((context, idx) => {
       results[i + idx] = context
     })
 
@@ -184,7 +220,11 @@ export async function generateContextsBatch(
     }
   }
 
-  return results
+  return {
+    contexts: results,
+    inputTokens: totalInputTokens,
+    outputTokens: totalOutputTokens,
+  }
 }
 
 /**
@@ -194,8 +234,8 @@ export async function generateChunkContext(
   chunk: ChunkForContext,
   _fileContext?: FileContext
 ): Promise<string> {
-  const results = await generateBatchContexts([chunk])
-  return results[0] || ''
+  const result = await generateBatchContexts([chunk])
+  return result.descriptions[0] || ''
 }
 
 /**

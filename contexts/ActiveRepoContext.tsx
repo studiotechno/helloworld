@@ -13,7 +13,7 @@ interface ActiveRepoContextType {
 
 const ActiveRepoContext = createContext<ActiveRepoContextType | undefined>(undefined)
 
-const STORAGE_KEY = 'techno:active-repo-id'
+const STORAGE_KEY = 'onhcet:active-repo-id'
 
 export function ActiveRepoProvider({ children }: { children: ReactNode }) {
   const { data: activeRepo, isLoading, error, refetch } = useActiveRepo()

@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, User, Mail, Github, Calendar, FolderGit2, GitBranch, Unplug } from 'lucide-react'
 import { DeleteAccountDialog } from '@/components/settings/DeleteAccountDialog'
 import { InstructionsCard } from '@/components/settings/InstructionsCard'
+import { UsageCard } from '@/components/settings/UsageCard'
 import { DisconnectRepoDialog } from '@/components/repos/DisconnectRepoDialog'
 import { TechTags } from '@/components/layout/TechTags'
 import { useActiveRepo, useRepoTechnologies, useDisconnectRepo } from '@/hooks'
@@ -72,7 +73,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <div className="mx-auto max-w-4xl space-y-8">
+        <div className="mx-auto max-w-6xl space-y-8">
           <Skeleton className="h-8 w-48" />
           <Card>
             <CardHeader>
@@ -96,7 +97,7 @@ export default function SettingsPage() {
 
   return (
     <div className="p-6">
-      <div className="mx-auto max-w-4xl space-y-8">
+      <div className="mx-auto max-w-6xl space-y-8">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Paramètres</h1>
           <p className="text-muted-foreground">Gérez votre compte et vos préférences</p>
@@ -167,6 +168,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Usage Card */}
+        <UsageCard />
 
         {/* Instructions Card */}
         <InstructionsCard />

@@ -54,6 +54,8 @@ export interface PipelineOptions {
   repo: string
   branch?: string
   jobId: string
+  /** User ID for token usage tracking */
+  userId: string
   onProgress?: (phase: JobPhase, progress: number, message: string) => void
   /** Generate contextual descriptions for chunks using Devstral (default: true - Mistral Scale is fast) */
   useContextualRetrieval?: boolean
@@ -87,6 +89,7 @@ export async function runIndexationPipeline(
     repo,
     branch,
     jobId,
+    userId,
     onProgress,
     useContextualRetrieval = true, // Enabled by default - Groq is fast enough
   } = options
@@ -95,6 +98,11 @@ export async function runIndexationPipeline(
   let filesTotal = 0
   let chunksCreated = 0
   let commitSha = ''
+
+  // Token usage tracking
+  let contextInputTokens = 0
+  let contextOutputTokens = 0
+  let embeddingTokens = 0
 
   try {
     // Initialize Tree-sitter for AST-based chunking
@@ -242,7 +250,7 @@ export async function runIndexationPipeline(
       }))
 
       // Generate contexts in batch with progress callback
-      const contexts = await generateContextsBatch(
+      const contextResult = await generateContextsBatch(
         chunksForContext,
         undefined, // No file context for now (would need to refactor to keep file contents)
         (completed, total) => {
@@ -255,9 +263,13 @@ export async function runIndexationPipeline(
         }
       )
 
+      // Track token usage
+      contextInputTokens = contextResult.inputTokens
+      contextOutputTokens = contextResult.outputTokens
+
       // Attach contexts to chunks
       for (let i = 0; i < allChunks.length; i++) {
-        allChunks[i].context = contexts[i] || undefined
+        allChunks[i].context = contextResult.contexts[i] || undefined
       }
 
       onProgress?.('Generating context', 60, `Context generation complete for ${allChunks.length} chunks`)
@@ -278,11 +290,12 @@ export async function runIndexationPipeline(
       )
 
       // Generate embeddings
-      const embeddings = await embedCode(contents)
+      const embeddingResult = await embedCode(contents)
+      embeddingTokens += embeddingResult.totalTokens
 
       // Attach embeddings to chunks
       for (let j = 0; j < batch.length; j++) {
-        batch[j].embedding = embeddings[j]
+        batch[j].embedding = embeddingResult.embeddings[j]
       }
 
       // Update progress (start from 60 if context was generated, 50 otherwise)
@@ -373,6 +386,43 @@ export async function runIndexationPipeline(
     // Mark job as completed
     await markJobCompleted(jobId, chunksCreated, commitSha)
     onProgress?.('Finalizing', 100, `Indexation complete: ${chunksCreated} chunks created`)
+
+    // Record token usage for billing
+    try {
+      // Record context generation tokens (Devstral)
+      if (contextInputTokens > 0 || contextOutputTokens > 0) {
+        await prisma.token_usage.create({
+          data: {
+            user_id: userId,
+            type: 'indexing_context',
+            model: 'devstral',
+            input_tokens: contextInputTokens,
+            output_tokens: contextOutputTokens,
+          },
+        })
+      }
+
+      // Record embedding tokens (Voyage)
+      if (embeddingTokens > 0) {
+        await prisma.token_usage.create({
+          data: {
+            user_id: userId,
+            type: 'indexing_embedding',
+            model: 'voyage-code-3',
+            input_tokens: embeddingTokens,
+            output_tokens: 0, // Embeddings have no output tokens
+          },
+        })
+      }
+
+      log.info('Token usage recorded', {
+        contextTokens: { input: contextInputTokens, output: contextOutputTokens },
+        embeddingTokens,
+      })
+    } catch (tokenError) {
+      // Don't fail the indexation if token tracking fails
+      log.error('Failed to record token usage', { error: tokenError })
+    }
 
     return {
       success: true,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
@@ -20,69 +20,89 @@ import { toast } from 'sonner'
 
 export default function ChatPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const queryClient = useQueryClient()
   const { data: activeRepo, isLoading: repoLoading } = useActiveRepo()
-  const { isIndexed, isInProgress, isLoading: indexLoading } = useIndexingStatus(activeRepo?.id)
+  const { isIndexed, isInProgress, isLoading: indexLoading, startIndexing, isStarting } = useIndexingStatus(activeRepo?.id)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const [userScrolled, setUserScrolled] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [conversationId, setConversationId] = useState<string | null>(null)
-  const conversationIdCapturedRef = useRef(false)
+  const newChatParam = searchParams.get('new')
+
+  // Conversation ID is stored in a ref to avoid re-renders during streaming
+  // We only use state for the initial null value to trigger effects when needed
+  const conversationIdRef = useRef<string | null>(null)
   const previousRepoIdRef = useRef<string | undefined>(undefined)
 
   // Reset chat when repo changes
   useEffect(() => {
     if (activeRepo?.id && previousRepoIdRef.current && activeRepo.id !== previousRepoIdRef.current) {
       // Repo changed - reset conversation
-      setConversationId(null)
+      conversationIdRef.current = null
       setInputValue('')
-      conversationIdCapturedRef.current = false
     }
     previousRepoIdRef.current = activeRepo?.id
   }, [activeRepo?.id])
 
-  // Custom fetch that captures conversation ID from response headers
-  const customFetch = useCallback(
-    async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
-      const response = await fetch(url, options)
+  // Refs for values needed in the fetch callback
+  const queryClientRef = useRef(queryClient)
+  const activeRepoIdRef = useRef(activeRepo?.id)
 
-      // Capture conversation ID from headers on first response (for new conversations)
-      if (!conversationIdCapturedRef.current) {
-        const newConversationId = response.headers.get('X-Conversation-Id')
-        if (newConversationId) {
-          conversationIdCapturedRef.current = true
-          setConversationId(newConversationId)
+  useEffect(() => {
+    queryClientRef.current = queryClient
+  }, [queryClient])
 
-          // Invalidate conversations cache immediately so sidebar updates
-          queryClient.invalidateQueries({ queryKey: ['conversations', activeRepo?.id] })
-
-          // Update URL without causing a page remount
-          window.history.replaceState(null, '', `/chat/${newConversationId}`)
-        }
-      }
-
-      return response
-    },
-    [queryClient, activeRepo?.id]
-  )
+  useEffect(() => {
+    activeRepoIdRef.current = activeRepo?.id
+  }, [activeRepo?.id])
 
   // Create chat transport with our API endpoint
-  // Include conversationId once we have it (after first message)
-  // Use custom fetch to capture conversation ID from response headers
+  // The transport is stable - it doesn't depend on conversationId state
+  // Instead, it reads conversationId from a ref in the fetch body
+  /* eslint-disable react-hooks/refs */
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/chat',
-        body: { repoId: activeRepo?.id, conversationId },
-        fetch: customFetch,
+        // Note: body is set dynamically via prepareRequestBody below
+        fetch: async (url: RequestInfo | URL, options?: RequestInit): Promise<Response> => {
+          // Inject conversationId into the request body
+          if (options?.body) {
+            try {
+              const body = JSON.parse(options.body as string)
+              body.repoId = activeRepoIdRef.current
+              body.conversationId = conversationIdRef.current
+              options = { ...options, body: JSON.stringify(body) }
+            } catch {
+              // If parsing fails, continue with original body
+            }
+          }
+
+          const response = await fetch(url, options)
+
+          // Capture conversation ID from headers on first response (for new conversations)
+          const newConversationId = response.headers.get('X-Conversation-Id')
+          if (newConversationId && !conversationIdRef.current) {
+            conversationIdRef.current = newConversationId
+
+            // Invalidate conversations cache immediately so sidebar updates
+            queryClientRef.current.invalidateQueries({ queryKey: ['conversations', activeRepoIdRef.current] })
+
+            // Update URL without causing a page remount
+            window.history.replaceState(null, '', `/chat/${newConversationId}`)
+          }
+
+          return response
+        },
       }),
-    [activeRepo?.id, conversationId, customFetch]
+    [] // No dependencies - transport is stable
   )
+  /* eslint-enable react-hooks/refs */
 
   // useChat hook from Vercel AI SDK v6
-  // Include activeRepo.id in the chat id so messages reset when repo changes
-  const chatId = conversationId || `new-chat-${activeRepo?.id || 'none'}`
-  const { messages, sendMessage, status, error } = useChat({
+  // Use a stable chat ID based on repo only - conversation tracking is internal
+  const chatId = `chat-${activeRepo?.id || 'none'}`
+  const { messages, sendMessage, status, error, setMessages } = useChat({
     id: chatId,
     transport,
     onError: (err) => {
@@ -91,62 +111,22 @@ export default function ChatPage() {
     },
   })
 
+  // Handle new chat request from sidebar
+  useEffect(() => {
+    if (newChatParam) {
+      // Reset conversation state for new chat
+      conversationIdRef.current = null
+      setMessages([])
+      setInputValue('')
+      // Clear the URL param
+      window.history.replaceState(null, '', '/chat')
+    }
+  }, [newChatParam, setMessages])
+
   const isLoading = status === 'submitted' || status === 'streaming'
 
   // Analysis loader state management
   const analysisLoader = useAnalysisLoader(status === 'submitted')
-
-  // Redirect to repos if no active repo or not indexed
-  useEffect(() => {
-    if (!repoLoading && !indexLoading) {
-      if (!activeRepo) {
-        router.push('/repos')
-      } else if (!isIndexed || isInProgress) {
-        // Repo exists but not indexed - redirect to repos
-        toast.error('Le repository doit être indexé pour démarrer une conversation')
-        router.push('/repos')
-      }
-    }
-  }, [activeRepo, repoLoading, indexLoading, isIndexed, isInProgress, router])
-
-  // Handle status changes: invalidate cache on submit, capture conversationId on completion
-  useEffect(() => {
-    const prevStatus = previousStatusRef.current
-
-    // When message is submitted, invalidate conversations cache so sidebar updates immediately
-    if (prevStatus === 'ready' && status === 'submitted' && messages.length > 0) {
-      // Small delay to let the API create the conversation
-      const timer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['conversations'] })
-      }, 500)
-      previousStatusRef.current = status
-      return () => clearTimeout(timer)
-    }
-
-    // After streaming completes, capture the conversation ID and update URL
-    if (prevStatus === 'streaming' && status === 'ready' && messages.length > 0 && !conversationId) {
-      const captureConversationId = async () => {
-        try {
-          const response = await fetch('/api/conversations')
-          if (response.ok) {
-            const conversations = await response.json()
-            if (conversations.length > 0) {
-              const latestConversation = conversations[0]
-              // Store the conversation ID for subsequent messages
-              setConversationId(latestConversation.id)
-              // Update URL without full page reload (keeps chat state)
-              router.replace(`/chat/${latestConversation.id}`, { scroll: false })
-            }
-          }
-        } catch (err) {
-          console.error('[Chat] Failed to fetch conversation:', err)
-        }
-      }
-      captureConversationId()
-    }
-
-    previousStatusRef.current = status
-  }, [status, messages.length, conversationId, router, queryClient])
 
   // Auto-scroll to bottom when new messages arrive (unless user scrolled up)
   useEffect(() => {
@@ -194,6 +174,21 @@ export default function ChatPage() {
     setInputValue(value)
   }, [])
 
+  // Handle index repo - start indexing and redirect to repos page
+  const handleIndexRepo = useCallback(() => {
+    startIndexing()
+    toast.success('Indexation lancee')
+    router.push('/repos')
+  }, [startIndexing, router])
+
+  // Determine empty state mode
+  const getEmptyStateMode = (): 'no-repo' | 'not-indexed' | 'indexing' | 'ready' => {
+    if (!activeRepo) return 'no-repo'
+    if (isInProgress) return 'indexing'
+    if (!isIndexed) return 'not-indexed'
+    return 'ready'
+  }
+
   // Loading state
   if (repoLoading || indexLoading) {
     return (
@@ -208,20 +203,9 @@ export default function ChatPage() {
     )
   }
 
-  // No repo connected or not indexed - will redirect
-  if (!activeRepo || !isIndexed || isInProgress) {
-    return (
-      <ChatContainer>
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-muted-foreground">
-            Redirection vers la selection de repository...
-          </p>
-        </div>
-      </ChatContainer>
-    )
-  }
-
+  const emptyStateMode = getEmptyStateMode()
   const hasMessages = messages.length > 0
+  const canChat = emptyStateMode === 'ready'
 
   // Helper function to extract text content from message parts
   const getMessageContent = (message: (typeof messages)[number]): string => {
@@ -244,7 +228,7 @@ export default function ChatPage() {
           repoFullName={activeRepo?.full_name}
           defaultBranch={activeRepo?.default_branch}
         >
-          {hasMessages ? (
+          {hasMessages && canChat ? (
             <div className="space-y-2 py-4">
               {messages.map((message) => (
                 <ChatMessage
@@ -273,7 +257,12 @@ export default function ChatPage() {
               )}
             </div>
           ) : (
-            <EmptyState onSuggestionClick={handleSuggestionClick} />
+            <EmptyState
+              mode={emptyStateMode}
+              repoName={activeRepo?.full_name}
+              onSuggestionClick={handleSuggestionClick}
+              onIndexRepo={handleIndexRepo}
+            />
           )}
         </CitationProvider>
       </div>
@@ -291,13 +280,15 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Input area */}
-      <ChatInput
-        value={inputValue}
-        onChange={handleInputChange}
-        onSend={handleSend}
-        disabled={isLoading}
-      />
+      {/* Input area - only show when ready to chat */}
+      {canChat && (
+        <ChatInput
+          value={inputValue}
+          onChange={handleInputChange}
+          onSend={handleSend}
+          disabled={isLoading}
+        />
+      )}
     </ChatContainer>
   )
 }

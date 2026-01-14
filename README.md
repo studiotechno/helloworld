@@ -1,4 +1,4 @@
-# techno
+# onhcet
 
 AI-powered codebase analysis for Product Managers and Entrepreneurs. Chat with your code to understand features, analyze impact, and evaluate technical debt.
 

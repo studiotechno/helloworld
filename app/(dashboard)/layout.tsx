@@ -3,8 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/layout/DashboardShell'
 
 export const metadata = {
-  title: 'Dashboard - techno',
-  description: 'Votre espace de travail techno',
+  title: 'Dashboard - onhcet',
+  description: 'Votre espace de travail onhcet',
 }
 
 interface GitHubUserMetadata {
