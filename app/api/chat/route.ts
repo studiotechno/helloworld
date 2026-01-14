@@ -237,7 +237,7 @@ export async function POST(req: Request) {
           if (retrievedChunks.length > 0) {
             // Build formatted context for the LLM
             const contextResult = buildCodeContext(retrievedChunks, {
-              maxTokens: 25000,
+              maxTokens: 3000,
               groupByFile: true,
               language: 'fr',
             })

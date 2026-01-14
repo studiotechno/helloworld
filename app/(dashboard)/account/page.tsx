@@ -137,28 +137,19 @@ export default function AccountPage() {
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <Button
+                onClick={() => router.push('/pricing')}
+                variant={isFree ? 'default' : 'outline'}
+              >
                 {isFree ? (
-                  <Button onClick={() => router.push('/pricing')}>
+                  <>
                     <Zap className="size-4 mr-2" />
                     Passer a Plus
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="outline" onClick={() => router.push('/pricing')}>
-                      Changer de plan
-                    </Button>
-                    <Button onClick={openCustomerPortal} disabled={portalLoading}>
-                      {portalLoading ? (
-                        <Loader2 className="size-4 mr-2 animate-spin" />
-                      ) : (
-                        <Settings2 className="size-4 mr-2" />
-                      )}
-                      Gerer
-                    </Button>
                   </>
+                ) : (
+                  'Changer de plan'
                 )}
-              </div>
+              </Button>
             </div>
 
             {/* Usage Stats */}

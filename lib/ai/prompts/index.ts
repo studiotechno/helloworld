@@ -2,9 +2,6 @@
 export {
   buildBaseSystemPrompt,
   buildSystemPromptWithContext,
-  ASSISTANT_IDENTITY,
-  ASSISTANT_ROLE,
-  FORMATTING_RULES,
-  CITATION_FORMAT,
+  SYSTEM_PROMPT,
   type UserInstructionsContext,
 } from './base'
