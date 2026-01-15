@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Check, User, Sparkles, FileCode, Terminal } from 'lucide-react'
+import { Copy, Check, User, FileCode, Terminal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CodeCitation } from './CodeCitation'
@@ -378,7 +378,17 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
         {isUser ? (
           <User className="size-4" />
         ) : (
-          <Sparkles className="size-4" />
+          <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="5" fill="currentColor" />
+            <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+            <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+            <line x1="1" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+            <line x1="19" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+            <line x1="4.2" y1="4.2" x2="7" y2="7" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+            <line x1="17" y1="17" x2="19.8" y2="19.8" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+            <line x1="4.2" y1="19.8" x2="7" y2="17" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+            <line x1="17" y1="7" x2="19.8" y2="4.2" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+          </svg>
         )}
       </div>
 

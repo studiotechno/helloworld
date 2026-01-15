@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
-  SquarePen,
   PanelLeftClose,
   PanelLeft,
   MessageSquare,
@@ -104,9 +103,15 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <div className="flex items-center gap-2.5">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10">
                 <svg className="size-4 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="6" cy="12" r="4" fill="currentColor" />
-                  <circle cx="18" cy="12" r="4" fill="currentColor" />
-                  <line x1="10" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="2" />
+                  <circle cx="12" cy="12" r="5" fill="currentColor" />
+                  <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+                  <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+                  <line x1="1" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+                  <line x1="19" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+                  <line x1="4.2" y1="4.2" x2="7" y2="7" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+                  <line x1="17" y1="17" x2="19.8" y2="19.8" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+                  <line x1="4.2" y1="19.8" x2="7" y2="17" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+                  <line x1="17" y1="7" x2="19.8" y2="4.2" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
                 </svg>
               </div>
               <span className="font-[family-name:var(--font-geist-mono)] text-lg font-medium tracking-tight">
@@ -142,7 +147,17 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               isCollapsed && 'justify-center px-2'
             )}
           >
-            <SquarePen className="size-4 shrink-0" />
+            <svg className="size-4 shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="5" fill="currentColor" />
+              <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+              <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+              <line x1="1" y1="12" x2="5" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+              <line x1="19" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
+              <line x1="4.2" y1="4.2" x2="7" y2="7" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+              <line x1="17" y1="17" x2="19.8" y2="19.8" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+              <line x1="4.2" y1="19.8" x2="7" y2="17" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+              <line x1="17" y1="7" x2="19.8" y2="4.2" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
+            </svg>
             {!isCollapsed && <span>Nouvelle conversation</span>}
           </Button>
 

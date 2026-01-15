@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AlertCircle } from 'lucide-react'
 
 export const metadata = {
-  title: 'Dashboard - Techno',
-  description: 'Votre espace de travail Techno',
+  title: 'Dashboard - Phare',
+  description: 'Votre espace de travail Phare',
 }
 
 interface GitHubUserMetadata {
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
               Bienvenue, <span className="text-primary">{displayName}</span>
             </h1>
             <p className="mt-1 text-muted-foreground">
-              Votre espace de travail Techno
+              Votre espace de travail Phare
             </p>
           </div>
           <Avatar className="size-12 ring-2 ring-primary/20">
