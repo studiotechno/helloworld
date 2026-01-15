@@ -21,7 +21,7 @@ export interface PlanConfig {
 export const PLANS: Record<PlanId, PlanConfig> = {
   free: {
     id: 'free',
-    name: 'Free',
+    name: 'Starter',
     description: 'Pour decouvrir la plateforme',
     tokenLimit: 40_000,
     repoLimit: 1,

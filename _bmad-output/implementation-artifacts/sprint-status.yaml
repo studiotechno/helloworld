@@ -41,32 +41,32 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   # Epic 1: Fondation Projet & Authentification Utilisateur
-  epic-1: backlog
+  epic-1: done
   1-1-initialisation-projet-infrastructure: done
   1-2-authentification-github-oauth: done
-  1-3-layout-application-navigation: backlog
-  1-4-deconnexion-utilisateur: backlog
-  1-5-suppression-de-compte: backlog
+  1-3-layout-application-navigation: done
+  1-4-deconnexion-utilisateur: done
+  1-5-suppression-de-compte: done
   epic-1-retrospective: optional
 
   # Epic 2: Connexion Repository GitHub
-  epic-2: backlog
-  2-1-integration-github-api-liste-des-repositories: backlog
-  2-2-connexion-dun-repository: backlog
-  2-3-affichage-repository-actif-selecteur: backlog
-  2-4-deconnexion-dun-repository: backlog
+  epic-2: done
+  2-1-integration-github-api-liste-des-repositories: done
+  2-2-connexion-dun-repository: done
+  2-3-affichage-repository-actif-selecteur: done
+  2-4-deconnexion-dun-repository: done
   epic-2-retrospective: optional
 
   # Epic 3: Interface Conversationnelle
-  epic-3: backlog
-  3-1-interface-chat-de-base: backlog
-  3-2-envoi-de-messages-streaming-des-reponses: backlog
-  3-3-persistance-historique-de-conversation: backlog
-  3-4-creation-de-nouvelle-conversation: backlog
-  3-5-liste-des-conversations-dans-la-sidebar: backlog
-  3-6-qualite-des-reponses-confiance-binaire: backlog
-  3-7-citations-de-code-inline: backlog
-  3-8-feedback-visuel-pour-analyses-longues: backlog
+  epic-3: done
+  3-1-interface-chat-de-base: done
+  3-2-envoi-de-messages-streaming-des-reponses: done
+  3-3-persistance-historique-de-conversation: done
+  3-4-creation-de-nouvelle-conversation: done
+  3-5-liste-des-conversations-dans-la-sidebar: done
+  3-6-qualite-des-reponses-confiance-binaire: done
+  3-7-citations-de-code-inline: done
+  3-8-feedback-visuel-pour-analyses-longues: done
   epic-3-retrospective: optional
 
   # Epic 4: Analyse de Codebase
