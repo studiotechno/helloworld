@@ -360,7 +360,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
   return (
     <div
       className={cn(
-        'group flex gap-3 px-4 py-4',
+        'group flex gap-2 px-2 py-3 sm:gap-3 sm:px-4 sm:py-4',
         isUser ? 'flex-row-reverse' : 'flex-row'
       )}
       role="article"
@@ -369,16 +369,16 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
       {/* Avatar */}
       <div
         className={cn(
-          'flex size-8 shrink-0 items-center justify-center rounded-full',
+          'flex size-7 shrink-0 items-center justify-center rounded-full sm:size-8',
           isUser
             ? 'bg-primary text-primary-foreground'
             : 'bg-secondary text-secondary-foreground'
         )}
       >
         {isUser ? (
-          <User className="size-4" />
+          <User className="size-3.5 sm:size-4" />
         ) : (
-          <svg className="size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="size-3.5 sm:size-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="5" fill="currentColor" />
             <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
             <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
@@ -395,7 +395,7 @@ export function ChatMessage({ role, content, isStreaming = false }: ChatMessageP
       {/* Message Content */}
       <div
         className={cn(
-          'relative max-w-[85%] rounded-2xl px-4 py-3',
+          'relative max-w-[90%] rounded-xl px-3 py-2 sm:max-w-[85%] sm:rounded-2xl sm:px-4 sm:py-3',
           isUser
             ? 'rounded-br-sm bg-primary text-primary-foreground shadow-lg shadow-primary/25'
             : 'rounded-bl-sm bg-secondary/50 text-foreground'

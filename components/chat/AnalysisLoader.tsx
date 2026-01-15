@@ -50,17 +50,17 @@ export function AnalysisLoader({
 
   return (
     <div
-      className={cn('flex items-start gap-3 px-4 py-4', className)}
+      className={cn('flex items-start gap-2 px-2 py-3 sm:gap-3 sm:px-4 sm:py-4', className)}
       role="status"
       aria-live="polite"
       aria-atomic="true"
       aria-label={`Analyse en cours: ${displayMessage}`}
     >
       {/* Animated Icon with Glow */}
-      <div className="relative flex size-8 shrink-0 items-center justify-center">
+      <div className="relative flex size-7 shrink-0 items-center justify-center sm:size-8">
         <svg
           className={cn(
-            'size-5 text-primary',
+            'size-4 text-primary sm:size-5',
             'motion-safe:animate-pulse'
           )}
           viewBox="0 0 24 24"
@@ -87,9 +87,9 @@ export function AnalysisLoader({
         />
       </div>
 
-      <div className="flex-1 space-y-2">
+      <div className="flex-1 space-y-1.5 sm:space-y-2">
         {/* Main Message */}
-        <p className="text-sm font-medium text-foreground">{displayMessage}</p>
+        <p className="text-xs font-medium text-foreground sm:text-sm">{displayMessage}</p>
 
         {/* Bouncing Dots */}
         <BouncingDots />

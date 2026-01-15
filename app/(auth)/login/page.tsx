@@ -32,8 +32,8 @@ async function LoginPageContent({
       <div className="w-full max-w-md space-y-8">
         {/* Logo / Brand */}
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary/10">
-            <svg className="size-9 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div className="mb-3 flex size-14 items-center justify-center rounded-xl bg-primary/10 sm:mb-4 sm:size-16 sm:rounded-2xl">
+            <svg className="size-7 text-primary sm:size-9" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="5" fill="currentColor" />
               <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
               <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
@@ -45,10 +45,10 @@ async function LoginPageContent({
               <line x1="17" y1="7" x2="19.8" y2="4.2" stroke="currentColor" strokeWidth="1.5" opacity="0.25" />
             </svg>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-foreground">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             <span className="text-primary">Phare</span>
           </h1>
-          <p className="mt-3 text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground sm:mt-3 sm:text-base">
             Discutez avec votre codebase en langage naturel
           </p>
         </div>
@@ -61,13 +61,13 @@ async function LoginPageContent({
         )}
 
         {/* Login Card */}
-        <div className="rounded-3xl border border-border/50 bg-card/50 p-8 shadow-xl backdrop-blur-sm">
-          <div className="space-y-6">
+        <div className="rounded-2xl border border-border/50 bg-card/50 p-6 shadow-xl backdrop-blur-sm sm:rounded-3xl sm:p-8">
+          <div className="space-y-5 sm:space-y-6">
             <div className="text-center">
-              <h2 className="text-xl font-semibold text-foreground">
+              <h2 className="text-lg font-semibold text-foreground sm:text-xl">
                 Bienvenue
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                 Connectez-vous en 2 clics avec GitHub
               </p>
             </div>

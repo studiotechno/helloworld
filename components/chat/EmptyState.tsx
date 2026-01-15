@@ -28,7 +28,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
   // No repo connected - show connect button
   if (mode === 'no-repo') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:gap-8 sm:py-12">
         <div className="relative">
           <div
             className={cn(
@@ -39,20 +39,20 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
           />
           <div
             className={cn(
-              'relative rounded-2xl p-6',
+              'relative rounded-xl p-4 sm:rounded-2xl sm:p-6',
               'bg-gradient-to-br from-muted/50 to-muted/20',
               'border border-border/50'
             )}
           >
-            <FolderGit2 className="size-12 text-muted-foreground" />
+            <FolderGit2 className="size-8 text-muted-foreground sm:size-12" />
           </div>
         </div>
 
-        <div className="space-y-3 text-center">
-          <h2 className="text-2xl font-bold md:text-3xl text-foreground">
+        <div className="space-y-2 text-center sm:space-y-3">
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
             Connectez votre repository
           </h2>
-          <p className="mx-auto max-w-md text-muted-foreground">
+          <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
             Pour commencer, sélectionnez un repository GitHub à analyser.
           </p>
         </div>
@@ -72,7 +72,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
   // Repo connected but not indexed - show index button
   if (mode === 'not-indexed') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:gap-8 sm:py-12">
         <div className="relative">
           <div
             className={cn(
@@ -83,20 +83,20 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
           />
           <div
             className={cn(
-              'relative rounded-2xl p-6',
+              'relative rounded-xl p-4 sm:rounded-2xl sm:p-6',
               'bg-gradient-to-br from-amber-500/20 to-amber-500/5',
               'border border-amber-500/30'
             )}
           >
-            <Database className="size-12 text-amber-500" />
+            <Database className="size-8 text-amber-500 sm:size-12" />
           </div>
         </div>
 
-        <div className="space-y-3 text-center">
-          <h2 className="text-2xl font-bold md:text-3xl text-foreground">
+        <div className="space-y-2 text-center sm:space-y-3">
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
             Indexez votre repository
           </h2>
-          <p className="mx-auto max-w-md text-muted-foreground">
+          <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
             {repoName ? (
               <>
                 <span className="font-medium text-foreground">{repoName}</span> est connecte.
@@ -123,7 +123,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
   // Indexing in progress
   if (mode === 'indexing') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:gap-8 sm:py-12">
         <div className="relative">
           <div
             className={cn(
@@ -134,20 +134,20 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
           />
           <div
             className={cn(
-              'relative rounded-2xl p-6',
+              'relative rounded-xl p-4 sm:rounded-2xl sm:p-6',
               'bg-gradient-to-br from-pink-500/20 to-pink-500/5',
               'border border-pink-500/30'
             )}
           >
-            <Loader2 className="size-12 text-pink-500 animate-spin" />
+            <Loader2 className="size-8 text-pink-500 animate-spin sm:size-12" />
           </div>
         </div>
 
-        <div className="space-y-3 text-center">
-          <h2 className="text-2xl font-bold md:text-3xl text-foreground">
+        <div className="space-y-2 text-center sm:space-y-3">
+          <h2 className="text-xl font-bold text-foreground sm:text-2xl md:text-3xl">
             Indexation en cours
           </h2>
-          <p className="mx-auto max-w-md text-muted-foreground">
+          <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
             Votre repository est en cours d&apos;analyse. Vous pouvez suivre la progression sur la page des repositories.
           </p>
         </div>
@@ -166,7 +166,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
 
   // Ready - show suggestions (default)
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-12">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-8 sm:gap-8 sm:py-12">
       {/* Icon with glow effect */}
       <div className="relative">
         {/* Glow background */}
@@ -180,12 +180,12 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
         {/* Icon container */}
         <div
           className={cn(
-            'relative rounded-2xl p-6',
+            'relative rounded-xl p-4 sm:rounded-2xl sm:p-6',
             'bg-gradient-to-br from-primary/20 to-primary/5',
             'border border-primary/20'
           )}
         >
-          <svg className="size-12 text-primary" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg className="size-8 text-primary sm:size-12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <circle cx="12" cy="12" r="5" fill="currentColor" />
             <line x1="12" y1="1" x2="12" y2="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
             <line x1="12" y1="19" x2="12" y2="23" stroke="currentColor" strokeWidth="1.5" opacity="0.4" />
@@ -200,10 +200,10 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
       </div>
 
       {/* Gradient title and description */}
-      <div className="space-y-3 text-center">
+      <div className="space-y-2 text-center sm:space-y-3">
         <h2
           className={cn(
-            'text-2xl font-bold md:text-3xl',
+            'text-xl font-bold sm:text-2xl md:text-3xl',
             'bg-gradient-to-r from-primary via-pink-400 to-primary',
             'bg-clip-text text-transparent',
             'animate-gradient bg-[length:200%_auto]'
@@ -211,7 +211,7 @@ export function EmptyState({ mode = 'ready', repoName, onSuggestionClick, onInde
         >
           Posez votre premiere question
         </h2>
-        <p className="mx-auto max-w-md text-muted-foreground">
+        <p className="mx-auto max-w-md text-sm text-muted-foreground sm:text-base">
           Interrogez votre codebase en langage naturel. Je suis la pour vous
           aider à comprendre votre code.
         </p>

@@ -19,15 +19,15 @@ export function SuggestionChips({
   className,
 }: SuggestionChipsProps) {
   return (
-    <div className={cn('flex flex-wrap justify-center gap-3', className)}>
+    <div className={cn('flex flex-wrap justify-center gap-2 sm:gap-3', className)}>
       {suggestions.map((suggestion, index) => (
         <button
           key={index}
           onClick={() => onSelect?.(suggestion.text)}
           className={cn(
-            'flex items-center gap-2 rounded-full px-4 py-2.5',
+            'flex items-center gap-1.5 rounded-full px-3 py-2 sm:gap-2 sm:px-4 sm:py-2.5',
             'border border-border/50 bg-secondary/50',
-            'text-sm text-muted-foreground',
+            'text-xs text-muted-foreground sm:text-sm',
             'transition-all duration-200',
             'hover:-translate-y-0.5 hover:border-primary/50 hover:text-foreground',
             'hover:bg-secondary/80 hover:shadow-md hover:shadow-primary/10',
@@ -38,7 +38,7 @@ export function SuggestionChips({
           role="button"
           aria-label={`Suggerer: ${suggestion.text}`}
         >
-          <span className="text-base">{suggestion.emoji}</span>
+          <span className="text-sm sm:text-base">{suggestion.emoji}</span>
           <span>{suggestion.text}</span>
         </button>
       ))}

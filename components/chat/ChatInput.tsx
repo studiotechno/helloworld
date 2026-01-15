@@ -53,8 +53,8 @@ export function ChatInput({
   const canSend = value.trim().length > 0 && !disabled
 
   return (
-    <div className="border-t border-border/50 bg-background/80 p-4 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-[1000px] items-end gap-3">
+    <div className="border-t border-border/50 bg-background/80 p-2 backdrop-blur-sm sm:p-4">
+      <div className="mx-auto flex max-w-[1000px] items-end gap-2 sm:gap-3">
         <Textarea
           ref={textareaRef}
           value={value}
@@ -63,9 +63,9 @@ export function ChatInput({
           placeholder={placeholder}
           disabled={disabled}
           className={cn(
-            'min-h-[56px] max-h-[200px] flex-1 resize-none rounded-3xl',
+            'min-h-[44px] max-h-[200px] flex-1 resize-none rounded-2xl sm:min-h-[56px] sm:rounded-3xl',
             'border-2 border-border/50 bg-secondary/30',
-            'px-6 py-4 text-base',
+            'px-4 py-3 text-sm sm:px-6 sm:py-4 sm:text-base',
             'placeholder:text-muted-foreground/60',
             'focus:border-primary focus:ring-2 focus:ring-primary/20',
             'transition-all duration-200'
@@ -78,18 +78,18 @@ export function ChatInput({
           size="icon"
           aria-label="Envoyer le message"
           className={cn(
-            'size-12 shrink-0 rounded-full',
+            'size-10 shrink-0 rounded-full sm:size-12',
             'bg-primary hover:bg-primary/90',
             'shadow-lg shadow-primary/25',
             'disabled:opacity-50 disabled:shadow-none',
             'transition-all duration-200'
           )}
         >
-          <Send className="size-5" />
+          <Send className="size-4 sm:size-5" />
         </Button>
       </div>
-      <p className="mx-auto mt-2 max-w-[1000px] text-center text-xs text-muted-foreground/60">
-        Appuyez sur{' '}
+      {/* Keyboard hint - hidden on mobile */}
+      <p className="mx-auto mt-2 hidden max-w-[1000px] text-center text-xs text-muted-foreground/60 sm:block">
         <kbd className="rounded bg-secondary px-1.5 py-0.5 font-mono text-xs">
           Cmd
         </kbd>{' '}
