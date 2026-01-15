@@ -10,14 +10,15 @@ interface ChatContainerProps {
 
 export function ChatContainer({ children, className }: ChatContainerProps) {
   return (
-    <div
-      className={cn(
-        'mx-auto flex h-full max-w-[1000px] flex-col',
-        'px-4 md:px-12',
-        className
-      )}
-    >
-      {children}
+    <div className="h-full p-6 pb-0">
+      <div
+        className={cn(
+          'mx-auto flex h-full max-w-6xl flex-col',
+          className
+        )}
+      >
+        {children}
+      </div>
     </div>
   )
 }

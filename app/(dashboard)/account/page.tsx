@@ -60,11 +60,13 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        <Skeleton className="h-10 w-48 mb-8" />
-        <div className="space-y-6">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-48 w-full" />
+      <div className="p-6">
+        <div className="mx-auto max-w-6xl space-y-8">
+          <Skeleton className="h-10 w-48" />
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
         </div>
       </div>
     )
@@ -72,15 +74,17 @@ export default function AccountPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto py-8 px-4 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Mon compte</h1>
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">
-              Impossible de charger les informations du compte.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="p-6">
+        <div className="mx-auto max-w-6xl space-y-8">
+          <h1 className="text-2xl font-bold tracking-tight">Mon compte</h1>
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardContent className="py-8 text-center">
+              <p className="text-muted-foreground">
+                Impossible de charger les informations du compte.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }
@@ -95,9 +99,10 @@ export default function AccountPage() {
   const isFree = plan === 'free'
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Mon compte</h1>
+    <div className="p-6">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Mon compte</h1>
         <div className={cn(
           "flex items-center gap-1 text-sm px-3 py-1.5 rounded-full border",
           plan === 'pro' ? 'bg-primary text-primary-foreground border-primary' :
@@ -275,6 +280,7 @@ export default function AccountPage() {
           </Card>
         )}
       </div>
+    </div>
     </div>
   )
 }

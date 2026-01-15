@@ -1,6 +1,6 @@
-# onhcet
+# Phare
 
-AI-powered codebase analysis for Product Managers and Entrepreneurs. Chat with your code to understand features, analyze impact, and evaluate technical debt.
+Éclairez votre code avec l'IA. Analysez votre codebase pour comprendre les fonctionnalités, évaluer l'impact des changements et identifier la dette technique.
 
 ## Tech Stack
 

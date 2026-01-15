@@ -61,7 +61,7 @@ describe('Sidebar', () => {
   it('renders expanded sidebar with branding', () => {
     render(<Sidebar isCollapsed={false} onToggle={mockOnToggle} />)
 
-    expect(screen.getByText('onhcet')).toBeInTheDocument()
+    expect(screen.getByText('Phare')).toBeInTheDocument()
     expect(screen.getByText('Nouvelle conversation')).toBeInTheDocument()
   })
 
@@ -69,7 +69,7 @@ describe('Sidebar', () => {
     render(<Sidebar isCollapsed={true} onToggle={mockOnToggle} />)
 
     // Branding text should not be visible
-    expect(screen.queryByText('onhcet')).not.toBeInTheDocument()
+    expect(screen.queryByText('Phare')).not.toBeInTheDocument()
     // Keyboard hint should not be visible
     expect(screen.queryByText('pour réduire')).not.toBeInTheDocument()
   })

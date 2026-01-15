@@ -66,7 +66,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
                   </svg>
                 </div>
                 <span className="font-[family-name:var(--font-geist-mono)] text-lg font-medium tracking-tight">
-                  onhcet
+                  Phare
                 </span>
               </SheetTitle>
             </SheetHeader>

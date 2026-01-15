@@ -16,10 +16,10 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Hello, codebase',
+  title: 'Phare',
   description:
-    'AI-powered codebase analysis for Product Managers and Entrepreneurs',
-  keywords: ['codebase', 'AI', 'analysis', 'product manager', 'chat'],
+    'Éclairez votre code avec l\'IA - Analyse intelligente pour Product Managers et Entrepreneurs',
+  keywords: ['codebase', 'AI', 'analysis', 'product manager', 'chat', 'phare'],
 }
 
 export default function RootLayout({
