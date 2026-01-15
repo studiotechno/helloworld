@@ -1,24 +1,6 @@
 import { redirect } from 'next/navigation'
 import { syncUser } from '@/lib/auth/sync-user'
 import { createClient } from '@/lib/supabase/server'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle } from 'lucide-react'
-
-export const metadata = {
-  title: 'Dashboard - Phare',
-  description: 'Votre espace de travail Phare',
-}
-
-interface GitHubUserMetadata {
-  user_name?: string
-  name?: string
-  full_name?: string
-  avatar_url?: string
-  email?: string
-  provider_id?: string
-  sub?: string
-}
 
 export default async function DashboardPage() {
   // First check if user is authenticated via Supabase
@@ -32,111 +14,9 @@ export default async function DashboardPage() {
     redirect('/login')
   }
 
-  // Try to sync user with Prisma (may fail if DB not configured)
-  const prismaUser = await syncUser()
+  // Sync user with Prisma
+  await syncUser()
 
-  // Use Prisma user if available, otherwise use Supabase auth data
-  const metadata = authUser.user_metadata as GitHubUserMetadata
-  const displayName = prismaUser?.name || metadata.name || metadata.full_name || metadata.user_name || 'Utilisateur'
-  const avatarUrl = prismaUser?.avatar_url || metadata.avatar_url
-  const email = prismaUser?.email || authUser.email
-  const githubId = prismaUser?.github_id || metadata.provider_id || metadata.sub || authUser.id
-  const createdAt = prismaUser?.created_at || new Date()
-
-  const initials = displayName
-    .split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'U'
-
-  return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-4xl space-y-8">
-        {/* Database Warning */}
-        {!prismaUser && (
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-yellow-500" />
-              <div>
-                <p className="font-medium text-yellow-500">Base de données non configurée</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Décommentez DATABASE_URL et DIRECT_URL dans .env.local pour activer la persistance des données.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Welcome Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Bienvenue, <span className="text-primary">{displayName}</span>
-            </h1>
-            <p className="mt-1 text-muted-foreground">
-              Votre espace de travail Phare
-            </p>
-          </div>
-          <Avatar className="size-12 ring-2 ring-primary/20">
-            <AvatarImage src={avatarUrl || undefined} alt={displayName} />
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-
-        {/* User Info Card */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle>Profil GitHub</CardTitle>
-            <CardDescription>Informations de votre compte connecté</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Nom</p>
-                <p className="text-foreground">{displayName}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p className="text-foreground">{email || 'Non renseigné'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">GitHub ID</p>
-                <p className="font-mono text-sm text-foreground">{githubId}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Membre depuis</p>
-                <p className="text-foreground">
-                  {new Date(createdAt).toLocaleDateString('fr-FR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Placeholder for next stories
-        <Card className="border-dashed border-border/50 bg-transparent">
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">Prochaines étapes</CardTitle>
-            <CardDescription>
-              Fonctionnalités à venir dans les prochaines stories
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="list-inside list-disc space-y-2 text-sm text-muted-foreground">
-              <li>Epic 2: Connexion d&apos;un repository GitHub</li>
-              <li>Epic 3: Interface conversationnelle avec votre code</li>
-              <li>Epic 4: Analyse de votre codebase</li>
-            </ul>
-          </CardContent>
-        </Card> */}
-      </div>
-    </div>
-  )
+  // Redirect to chat (new conversation)
+  redirect('/chat')
 }
