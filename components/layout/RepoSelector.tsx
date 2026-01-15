@@ -110,18 +110,20 @@ export function RepoSelector({ repo, isLoading, className }: RepoSelectorProps) 
             )}
             aria-label={`Repository actif: ${repo.full_name}`}
           >
-            <FolderGit2 className="size-4 text-pink-500" />
-            <span className="max-w-[180px] truncate font-medium">
+            <FolderGit2 className="size-4 shrink-0 text-pink-500" />
+            <span className="max-w-[100px] truncate font-medium sm:max-w-[180px]">
               {repo.full_name}
             </span>
             {!isLoadingStatus && (
-              <IndexingBadge status={status} />
+              <span className="hidden sm:inline-flex">
+                <IndexingBadge status={status} />
+              </span>
             )}
-            <span className="flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+            <span className="hidden items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:flex">
               <GitBranch className="size-3" />
               {repo.default_branch}
             </span>
-            <ChevronDown className="size-4 text-muted-foreground" />
+            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-72">
