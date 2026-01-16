@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://app.phare.tech'),
   title: 'Phare',
   description:
     'Éclairez votre code avec l\'IA - Analyse intelligente pour Product Managers et Entrepreneurs',
