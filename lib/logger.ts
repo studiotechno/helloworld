@@ -6,12 +6,73 @@
  * - Structured context (JSON in production)
  * - Environment-aware output (pretty in dev, JSON in prod)
  * - Namespace support for filtering
+ * - Automatic redaction of sensitive data
  */
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
 interface LogContext {
   [key: string]: unknown
+}
+
+// Patterns to redact from logs
+const SENSITIVE_PATTERNS = [
+  /Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, // Bearer tokens
+  /ghp_[A-Za-z0-9]{36}/gi, // GitHub personal access tokens
+  /gho_[A-Za-z0-9]{36}/gi, // GitHub OAuth tokens
+  /ghs_[A-Za-z0-9]{36}/gi, // GitHub server tokens
+  /sk-[A-Za-z0-9]{20,}/gi, // API keys (Stripe, OpenAI style)
+  /sk_test_[A-Za-z0-9]{20,}/gi, // Stripe test keys
+  /sk_live_[A-Za-z0-9]{20,}/gi, // Stripe live keys
+  /whsec_[A-Za-z0-9]{32,}/gi, // Stripe webhook secrets
+  /password["\s:=]+[^\s,}"]+/gi, // Password fields
+  /secret["\s:=]+[^\s,}"]+/gi, // Secret fields
+  /token["\s:=]+[^\s,}"]+/gi, // Token fields
+  /api[_-]?key["\s:=]+[^\s,}"]+/gi, // API key fields
+]
+
+/**
+ * Redact sensitive information from a string
+ */
+function redactSensitive(value: string): string {
+  let result = value
+  for (const pattern of SENSITIVE_PATTERNS) {
+    result = result.replace(pattern, '[REDACTED]')
+  }
+  return result
+}
+
+/**
+ * Recursively redact sensitive data from an object
+ */
+function redactContext(context: LogContext): LogContext {
+  const result: LogContext = {}
+
+  for (const [key, value] of Object.entries(context)) {
+    // Redact known sensitive keys entirely
+    const lowerKey = key.toLowerCase()
+    if (
+      lowerKey.includes('token') ||
+      lowerKey.includes('secret') ||
+      lowerKey.includes('password') ||
+      lowerKey.includes('key') ||
+      lowerKey.includes('authorization')
+    ) {
+      result[key] = '[REDACTED]'
+      continue
+    }
+
+    // Recursively handle nested objects
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      result[key] = redactContext(value as LogContext)
+    } else if (typeof value === 'string') {
+      result[key] = redactSensitive(value)
+    } else {
+      result[key] = value
+    }
+  }
+
+  return result
 }
 
 interface LogEntry {
@@ -93,12 +154,16 @@ export function createLogger(namespace: string) {
   const log = (level: LogLevel, message: string, context?: LogContext): void => {
     if (!shouldLog(level)) return
 
+    // Redact sensitive data from message and context
+    const safeMessage = redactSensitive(message)
+    const safeContext = context ? redactContext(context) : undefined
+
     const entry: LogEntry = {
       level,
       namespace,
-      message,
+      message: safeMessage,
       timestamp: new Date().toISOString(),
-      ...(context && { context }),
+      ...(safeContext && { context: safeContext }),
     }
 
     output(entry)

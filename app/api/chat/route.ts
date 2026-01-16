@@ -13,6 +13,7 @@ import {
 } from '@/lib/rag'
 import { getModelForQuery, logRouting } from '@/lib/ai'
 import { checkTokenLimit } from '@/lib/stripe'
+import { checkRateLimit, rateLimitHeaders, rateLimitExceededResponse } from '@/lib/security'
 
 // Part schema for AI SDK v6 message format
 // Accept any part type (text, tool_call, tool_result, etc.)
@@ -72,6 +73,12 @@ export async function POST(req: Request) {
         JSON.stringify({ error: { code: 'UNAUTHORIZED', message: 'Non authentifie' } }),
         { status: 401, headers: { 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Rate limiting - 20 requests per minute for chat (expensive AI calls)
+    const rateLimitResult = await checkRateLimit(`chat:${user.id}`, 'chat')
+    if (!rateLimitResult.success) {
+      return rateLimitExceededResponse(rateLimitResult)
     }
 
     // Check token limit before processing
@@ -346,6 +353,12 @@ NE REPONDS PAS avec des exemples generiques ou inventes. Dis simplement que tu n
       response.headers.set('X-Repository-Indexed', isIndexed ? 'true' : 'false')
       response.headers.set('X-Code-Chunks-Used', String(retrievedChunks.length))
     }
+
+    // Add rate limit headers
+    const rlHeaders = rateLimitHeaders(rateLimitResult)
+    Object.entries(rlHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value)
+    })
 
     return response
   } catch (error) {

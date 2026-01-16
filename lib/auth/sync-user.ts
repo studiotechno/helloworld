@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/prisma'
 import { createClient } from '@/lib/supabase/server'
+import { encryptToken, decryptToken } from '@/lib/security'
 
 interface GitHubUserMetadata {
   user_name?: string
@@ -39,6 +40,9 @@ export async function syncUser() {
   } = await supabase.auth.getSession()
   const providerToken = session?.provider_token
 
+  // Encrypt the GitHub token before storing
+  const encryptedToken = encryptToken(providerToken)
+
   try {
     // Upsert user record in Prisma
     const user = await prisma.users.upsert({
@@ -47,7 +51,7 @@ export async function syncUser() {
         email: authUser.email,
         name: metadata.name || metadata.full_name || metadata.user_name,
         avatar_url: metadata.avatar_url,
-        github_token: providerToken || undefined,
+        github_token: encryptedToken || undefined,
         updated_at: new Date(),
       },
       create: {
@@ -55,11 +59,15 @@ export async function syncUser() {
         email: authUser.email,
         name: metadata.name || metadata.full_name || metadata.user_name,
         avatar_url: metadata.avatar_url,
-        github_token: providerToken || undefined,
+        github_token: encryptedToken || undefined,
       },
     })
 
-    return user
+    // Return user with decrypted token for immediate use
+    return {
+      ...user,
+      github_token: decryptToken(user.github_token),
+    }
   } catch (error) {
     console.error('[syncUser] Error upserting user:', error)
     return null
@@ -88,7 +96,16 @@ export async function getCurrentUser() {
     const user = await prisma.users.findUnique({
       where: { github_id: githubId },
     })
-    return user
+
+    if (!user) {
+      return null
+    }
+
+    // Return user with decrypted token
+    return {
+      ...user,
+      github_token: decryptToken(user.github_token),
+    }
   } catch (error) {
     console.error('[getCurrentUser] Error fetching user:', error)
     return null

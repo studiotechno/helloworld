@@ -18,7 +18,7 @@ model users {
   email        String?
   name         String?
   avatar_url   String?
-  github_token String?  // Stored encrypted via Supabase Vault
+  github_token String?  // Encrypted with AES-256-GCM (see lib/security/encryption.ts)
   created_at   DateTime @default(now()) @db.Timestamptz(6)
   updated_at   DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 

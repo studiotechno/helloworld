@@ -3,6 +3,9 @@
 
 import { Octokit } from 'octokit'
 import type { GitHubRepo, GitHubContent, GitHubRateLimit } from './types'
+import { logger } from '@/lib/logger'
+
+const log = logger.github
 
 // Create authenticated GitHub client
 export function createGitHubClient(accessToken: string): Octokit {
@@ -23,26 +26,14 @@ export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]>
     affiliation: 'owner,collaborator,organization_member',
   })
 
-  console.log(`[GitHub] Fetched ${userRepos.length} repos from listForAuthenticatedUser`)
+  log.debug('Fetched repos from listForAuthenticatedUser', { count: userRepos.length })
 
   // 2. Fetch organizations the user belongs to
-  try {
-    // First try to get orgs with detailed response
-    const orgsResponse = await octokit.rest.orgs.listForAuthenticatedUser({
-      per_page: 100,
-    })
-    console.log(`[GitHub] Orgs API response status: ${orgsResponse.status}`)
-    console.log(`[GitHub] Orgs API response headers:`, JSON.stringify(orgsResponse.headers['x-oauth-scopes']))
-    console.log(`[GitHub] Orgs raw data:`, JSON.stringify(orgsResponse.data.map(o => o.login)))
-  } catch (e) {
-    console.error(`[GitHub] Error fetching orgs details:`, e)
-  }
-
   const orgs = await octokit.paginate(octokit.rest.orgs.listForAuthenticatedUser, {
     per_page: 100,
   })
 
-  console.log(`[GitHub] User belongs to ${orgs.length} organizations: ${orgs.map(o => o.login).join(', ')}`)
+  log.debug('User organizations', { count: orgs.length, orgs: orgs.map(o => o.login) })
 
   // 3. Fetch repos from each organization
   const orgReposPromises = orgs.map(async (org) => {
@@ -53,10 +44,10 @@ export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]>
         direction: 'desc',
         per_page: 100,
       })
-      console.log(`[GitHub] Fetched ${repos.length} repos from org ${org.login}`)
+      log.debug('Fetched repos from org', { org: org.login, count: repos.length })
       return repos
     } catch (error) {
-      console.error(`[GitHub] Error fetching repos from org ${org.login}:`, error)
+      log.error('Error fetching repos from org', { org: org.login, error: error instanceof Error ? error.message : String(error) })
       return []
     }
   })
@@ -74,7 +65,7 @@ export async function fetchUserRepos(accessToken: string): Promise<GitHubRepo[]>
   }
 
   const uniqueRepos = Array.from(uniqueReposMap.values())
-  console.log(`[GitHub] Total unique repos: ${uniqueRepos.length}`)
+  log.info('Total unique repos fetched', { count: uniqueRepos.length })
 
   // Sort by pushed_at descending
   uniqueRepos.sort((a, b) => {

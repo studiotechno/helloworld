@@ -9,6 +9,7 @@ import {
   isJobInProgress,
 } from '@/lib/indexing'
 import { runIndexationPipeline } from '@/lib/indexing/pipeline'
+import { checkRateLimit, rateLimitExceededResponse } from '@/lib/security'
 
 const log = logger.api
 
@@ -42,6 +43,12 @@ export async function POST(req: Request, { params }: RouteParams) {
         { error: { code: 'UNAUTHORIZED', message: 'Non authentifié' } },
         { status: 401 }
       )
+    }
+
+    // Rate limiting - 5 requests per minute for indexation (resource intensive)
+    const rateLimitResult = await checkRateLimit(`indexation:${user.id}`, 'indexation')
+    if (!rateLimitResult.success) {
+      return rateLimitExceededResponse(rateLimitResult)
     }
 
     if (!user.github_token) {

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getCurrentUser } from '@/lib/auth/sync-user'
 import { prisma } from '@/lib/db/prisma'
 import { stripe, getStripePriceId, PLANS, type PlanId } from '@/lib/stripe'
+import { checkRateLimit, rateLimitExceededResponse } from '@/lib/security'
 
 const checkoutSchema = z.object({
   plan: z.enum(['plus', 'pro']),
@@ -22,6 +23,12 @@ export async function POST(req: Request) {
         { error: { code: 'UNAUTHORIZED', message: 'Non authentifie' } },
         { status: 401 }
       )
+    }
+
+    // Rate limiting - 10 requests per minute for checkout
+    const rateLimitResult = await checkRateLimit(`checkout:${user.id}`, 'checkout')
+    if (!rateLimitResult.success) {
+      return rateLimitExceededResponse(rateLimitResult)
     }
 
     const body = await req.json()
